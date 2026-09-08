@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #FBF7EE;
+  --paper-warm: #F1E7CE;
+  --surface: #FFFFFF;
+  --forest: #22403A;
+  --forest-deep: #152B26;
+  --forest-tint: #E4ECE7;
+  --marigold: #E2A33D;
+  --marigold-tint: #F8E6C1;
+  --indigo: #3E4F74;
+  --indigo-tint: #E5E9F1;
+  --clay: #BD5B3B;
+  --clay-tint: #F5E1D6;
+  --ink: #221F1B;
+  --ink-soft: #665F51;
+  --ink-faint: #948C7A;
+  --line: #E6DAB9;
+  --good: #3F7455;
+  --shadow-sm: 0 2px 8px rgba(34,31,27,0.06);
+  --shadow-md: 0 8px 24px rgba(34,31,27,0.09);
+  --shadow-lg: 0 20px 48px rgba(21,43,38,0.16);
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 10px;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: 'Mulish', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body.fs-large {
+  zoom: 1.12;
+}
+
+body.fs-xlarge {
+  zoom: 1.24;
+}
+
+.font-fraunces {
+  font-family: 'Fraunces', serif;
+}
+
+.font-baloo {
+  font-family: 'Baloo 2', sans-serif;
+}
+
+.font-mulish {
+  font-family: 'Mulish', sans-serif;
+}
+
+::selection {
+  background-color: var(--marigold-tint);
+}
+
+@keyframes memwave {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes sosPulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { transform: scaleX(0.1); }
+  50% { transform: scaleX(0.85); }
+  100% { transform: scaleX(1); }
+}
+
+.animate-rise {
+  animation: riseIn 0.3s ease forwards;
+}
+
+.animate-memwave-1 { animation: memwave 0.9s ease-in-out infinite 0s; }
+.animate-memwave-2 { animation: memwave 0.9s ease-in-out infinite 0.15s; }
+.animate-memwave-3 { animation: memwave 0.9s ease-in-out infinite 0.3s; }
+.animate-memwave-4 { animation: memwave 0.9s ease-in-out infinite 0.1s; }

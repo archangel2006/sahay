@@ -1,0 +1,7 @@
+{
+  "name": "Sahay",
+  "description": "Cognitive Care Platform for elders featuring adaptive brain activities, family oversight, medication reminders, and multilingual AI voice assistance.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
