@@ -31,15 +31,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const isCompanion = userRole === 'companion';
 
-  const navItems: { id: PageId; label: string; icon: React.ElementType }[] = [
+  const allNavItems: { id: PageId; label: string; icon: React.ElementType; companionOnly?: boolean }[] = [
     { id: 'home', label: 'Overview', icon: Home },
-    { id: 'activities', label: 'Activities', icon: Gamepad2 },
+    { id: 'activities', label: 'Activities', icon: Gamepad2, companionOnly: true },
     { id: 'reminders', label: 'Reminders', icon: Clock },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'family', label: isCompanion ? 'Memory Book' : 'Family Dashboard', icon: isCompanion ? Heart : Users },
     { id: 'insights', label: isCompanion ? 'My Insights' : 'Care Insights', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: SettingsGear },
   ];
+
+  const navItems = allNavItems.filter((item) => !item.companionOnly || isCompanion);
 
   return (
     <aside className="w-[264px] shrink-0 bg-[#22403A] text-[#FBF7EE] p-6 hidden md:flex flex-col sticky top-0 h-screen">

@@ -56,7 +56,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({ onSelectGame }) 
       </div>
 
       <h2 className="font-fraunces text-2xl md:text-3xl font-medium text-[#221F1B] mb-6">
-        Pick Something to Play
+        Pick an Activity
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -74,7 +74,7 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
       <div className="flex flex-wrap gap-2 p-1 bg-[#F1E7CE] rounded-full w-fit mb-6">
         {[
           { id: 'overview', label: isCompanion ? 'Summary & Milestones' : 'Overview Dashboard' },
-          { id: 'cognitive', label: isCompanion ? 'Mind & Memory Games' : 'Cognitive Latency & Log' },
+          { id: 'cognitive', label: isCompanion ? 'Activity History' : 'Cognitive Latency & Log' },
           { id: 'safety', label: isCompanion ? 'Safe Neighborhood Zone' : 'Geofence & Location' },
           { id: 'alerts', label: isCompanion ? 'Care Notes (2)' : 'Clinical Alerts (2)' },
         ].map((tab) => (
@@ -167,12 +167,12 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
               </div>
             </div>
 
-            {onNavigateToActivities && (
+            {isCompanion && onNavigateToActivities && (
               <button
                 onClick={onNavigateToActivities}
                 className="px-4 py-2.5 rounded-xl bg-[#22403A] text-[#FBF7EE] font-baloo font-bold text-xs hover:bg-[#152B26] transition-colors cursor-pointer shrink-0 shadow-xs"
               >
-                Play Mind Activity
+                Play Activity
               </button>
             )}
           </div>
@@ -185,11 +185,11 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-fraunces text-xl text-[#221F1B]">
-                {isCompanion ? 'My Memory Game History' : 'Cognitive Latency & Session Log'}
+                {isCompanion ? 'My Activity History' : 'Cognitive Latency & Session Log'}
               </h3>
               <p className="text-xs text-[#665F51]">
                 {isCompanion
-                  ? 'Your daily mind exercises designed to keep memory agile and cheerful.'
+                  ? 'Your daily activities designed to keep focus agile and cheerful.'
                   : 'Tracked accuracy and response latencies over recent interactive sessions.'}
               </p>
             </div>

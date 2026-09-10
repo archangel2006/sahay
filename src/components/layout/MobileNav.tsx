@@ -40,15 +40,17 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 }) => {
   const isCompanion = userRole === 'companion';
 
-  const navItems: { id: PageId; label: string; icon: React.ElementType }[] = [
+  const allNavItems: { id: PageId; label: string; icon: React.ElementType; companionOnly?: boolean }[] = [
     { id: 'home', label: 'Overview', icon: Home },
-    { id: 'activities', label: 'Activities', icon: Gamepad2 },
+    { id: 'activities', label: 'Activities', icon: Gamepad2, companionOnly: true },
     { id: 'reminders', label: 'Reminders', icon: Clock },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'family', label: isCompanion ? 'Memory Book' : 'Family Dashboard', icon: isCompanion ? Heart : Users },
     { id: 'insights', label: isCompanion ? 'My Insights' : 'Care Insights', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: SettingsGear },
   ];
+
+  const navItems = allNavItems.filter((item) => !item.companionOnly || isCompanion);
 
   return (
     <>
@@ -149,7 +151,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E6DAB9] px-2 py-2 flex items-center justify-around z-30 shadow-lg">
         {[
           { id: 'home', label: 'Home', icon: Home },
-          { id: 'activities', label: 'Activities', icon: Gamepad2 },
+          ...(isCompanion
+            ? [{ id: 'activities', label: 'Activities', icon: Gamepad2 }]
+            : [{ id: 'insights', label: 'Insights', icon: TrendingUp }]),
           { id: 'reminders', label: 'Reminders', icon: Clock },
           { id: 'family', label: isCompanion ? 'Memory Book' : 'Family', icon: isCompanion ? Heart : Users },
         ].map((item) => {

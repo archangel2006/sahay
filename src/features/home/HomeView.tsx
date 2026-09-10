@@ -80,7 +80,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             A gentle memory match with the tea garden, whenever you’re ready.
           </h2>
           <p className="text-xs sm:text-sm text-[#CBD9D2] max-w-md leading-relaxed mb-5">
-            Two minutes a day helps keep the mind active. Sahay adjusts every activity to how you’re doing — no pressure, no scores that matter but your own.
+            Two minutes a day helps keep memory and focus sharp. Sahay adjusts every game to how you’re doing — no pressure, no scores that matter but your own.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
