@@ -118,6 +118,22 @@ export const api = {
     return newItem;
   },
 
+  async updateFamilyMember(item: FamilyMemberItem): Promise<FamilyMemberItem> {
+    try {
+      await fetch(`/api/family/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      });
+    } catch (e) {
+      // Offline fallback
+    }
+    const current = sandboxStorage.getFamily();
+    const updated = current.map((m) => (m.id === item.id ? item : m));
+    sandboxStorage.saveFamily(updated);
+    return item;
+  },
+
   // Activity Logs
   async logActivity(data: { activityId: string; title: string; durationSeconds: number; accuracyPercentage: number }): Promise<void> {
     try {

@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   Home,
-  Layers,
+  Gamepad2,
   Clock,
   Calendar,
   Users,
   TrendingUp,
-  Sliders,
+  Settings as SettingsGear,
   Leaf,
   Phone,
   LogOut,
@@ -33,12 +33,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems: { id: PageId; label: string; icon: React.ElementType }[] = [
     { id: 'home', label: 'Overview', icon: Home },
-    { id: 'activities', label: 'Activities', icon: Layers },
+    { id: 'activities', label: 'Activities', icon: Gamepad2 },
     { id: 'reminders', label: 'Reminders', icon: Clock },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
-    { id: 'family', label: isCompanion ? 'Family / Memory' : 'Family Dashboard', icon: Users },
+    { id: 'family', label: isCompanion ? 'Memory Book' : 'Family Dashboard', icon: isCompanion ? Heart : Users },
     { id: 'insights', label: isCompanion ? 'My Insights' : 'Care Insights', icon: TrendingUp },
-    { id: 'settings', label: 'Settings', icon: Sliders },
+    { id: 'settings', label: 'Settings', icon: SettingsGear },
   ];
 
   return (

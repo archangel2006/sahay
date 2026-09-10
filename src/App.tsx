@@ -143,6 +143,11 @@ export default function App() {
     setFamilyMembers((prev) => [...prev, created]);
   };
 
+  const handleUpdateFamilyMember = async (item: FamilyMemberItem) => {
+    const updated = await api.updateFamilyMember(item);
+    setFamilyMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+  };
+
   const handleUpdateRadius = async (radius: number) => {
     setSafeZoneRadius(radius);
     await api.updateSafetyRadius(radius);
@@ -265,6 +270,7 @@ export default function App() {
             <FamilyView
               familyMembers={familyMembers}
               onAddFamilyMember={handleAddFamilyMember}
+              onUpdateFamilyMember={handleUpdateFamilyMember}
               safeZoneRadius={safeZoneRadius}
               onUpdateRadius={handleUpdateRadius}
               zoneEvents={zoneEvents}
@@ -305,20 +311,23 @@ export default function App() {
         </main>
       </div>
 
-      {/* Global Persistent "Talk to Sahay" Floating Action Button */}
-      <div className="fixed bottom-20 md:bottom-6 right-5 z-30 flex items-center">
+      {/* Global High-Visibility "Talk to Sahay" Floating Voice Orb */}
+      <div className="fixed bottom-20 md:bottom-7 right-6 z-40">
         <button
           type="button"
           onClick={() => setIsVoiceModalOpen(true)}
-          className="group flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#22403A] text-[#FBF7EE] shadow-xl hover:bg-[#152B26] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-[#E2A33D]/30"
-          title="Talk with Sahay Assistant"
+          className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#152B26] text-[#FBF7EE] shadow-2xl hover:shadow-[0_10px_28px_rgba(226,163,61,0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer border-2 border-[#E2A33D]"
+          title="Talk with Sahay"
         >
-          <div className="w-8 h-8 rounded-full bg-[#E2A33D] text-[#152B26] flex items-center justify-center shrink-0 shadow-xs">
-            <Mic className="w-4 h-4 group-hover:animate-pulse" />
+          {/* Subtle radiant pulse aura */}
+          <span className="absolute -inset-1 rounded-full bg-[#E2A33D]/25 animate-pulse pointer-events-none" />
+
+          <div className="relative w-8 h-8 rounded-full bg-gradient-to-tr from-[#E2A33D] to-[#F3C268] text-[#152B26] flex items-center justify-center shrink-0 shadow-sm">
+            <Mic className="w-4 h-4 text-[#152B26] group-hover:scale-110 transition-transform" />
           </div>
+
           <div className="text-left pr-1 hidden sm:block">
-            <div className="font-baloo font-bold text-xs leading-none">Talk to Sahay</div>
-            <div className="text-[10px] text-[#9FB4AC] font-medium leading-tight">AI Voice Assistant</div>
+            <div className="font-baloo font-bold text-sm leading-none text-[#FBF7EE]">Talk to Sahay</div>
           </div>
         </button>
       </div>

@@ -113,8 +113,10 @@ The app runs on port 3000 at `http://localhost:3000`.
 
 ---
 
-## 📋 Good First Issues
+## 📋 Good First Issues & Issue Roadmap
 
-1. **Regional Localization**: Adding localized greeting phrases and reminder presets for Khasi, Bodo, and Mizo.
-2. **Sound Effects**: Integrating gentle chime sounds using Web Audio API on card matches.
-3. **Memory Book Audio Recording**: Hooking up browser MediaRecorder API to record custom family messages directly in the browser.
+See our full [Open Source Issue Catalog](OPEN_SOURCE_ISSUES.md) and domain documentation in `open-source-reference/` for 13+ tagged and estimated issues:
+1. **Odd One Out Game (`odd`)**: Adding categorical classification with culturally rooted Assamese/NE items (`good first issue`, `easy`).
+2. **Regional Localization**: Adding localized greeting phrases and reminder presets for Khasi, Bodo, and Mizo (`good first issue`, `easy`).
+3. **Voice Pitch & Speech Speed Customizer**: User preferences for speech synthesis rate (`good first issue`, `easy`).
+4. **Memory Book Audio Recording**: Hooking up browser MediaRecorder API to record custom family messages directly in the browser (`medium`, `help wanted`).

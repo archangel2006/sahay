@@ -4,11 +4,12 @@ import {
   X,
   Leaf,
   Home,
-  Layers,
+  Gamepad2,
   Clock,
   Users,
   TrendingUp,
-  Sliders,
+  Heart,
+  Settings as SettingsGear,
   Calendar,
   Phone,
   MoreHorizontal,
@@ -41,12 +42,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   const navItems: { id: PageId; label: string; icon: React.ElementType }[] = [
     { id: 'home', label: 'Overview', icon: Home },
-    { id: 'activities', label: 'Activities', icon: Layers },
+    { id: 'activities', label: 'Activities', icon: Gamepad2 },
     { id: 'reminders', label: 'Reminders', icon: Clock },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
-    { id: 'family', label: isCompanion ? 'Family / Memory' : 'Family Dashboard', icon: Users },
+    { id: 'family', label: isCompanion ? 'Memory Book' : 'Family Dashboard', icon: isCompanion ? Heart : Users },
     { id: 'insights', label: isCompanion ? 'My Insights' : 'Care Insights', icon: TrendingUp },
-    { id: 'settings', label: 'Settings', icon: Sliders },
+    { id: 'settings', label: 'Settings', icon: SettingsGear },
   ];
 
   return (
@@ -148,9 +149,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E6DAB9] px-2 py-2 flex items-center justify-around z-30 shadow-lg">
         {[
           { id: 'home', label: 'Home', icon: Home },
-          { id: 'activities', label: 'Activities', icon: Layers },
+          { id: 'activities', label: 'Activities', icon: Gamepad2 },
           { id: 'reminders', label: 'Reminders', icon: Clock },
-          { id: 'family', label: 'Family', icon: Users },
+          { id: 'family', label: isCompanion ? 'Memory Book' : 'Family', icon: isCompanion ? Heart : Users },
         ].map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;

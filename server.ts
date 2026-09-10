@@ -232,6 +232,25 @@ app.post('/api/family', (req, res) => {
   res.status(201).json(newItem);
 });
 
+app.put('/api/family/:id', (req, res) => {
+  const { id } = req.params;
+  const index = familyMembers.findIndex((m) => m.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Family member not found' });
+  const { name, rel, fact, color, imageUrl, address, phone, voiceNoteText } = req.body;
+  familyMembers[index] = {
+    ...familyMembers[index],
+    name: name ?? familyMembers[index].name,
+    rel: rel ?? familyMembers[index].rel,
+    fact: fact ?? familyMembers[index].fact,
+    color: color ?? familyMembers[index].color,
+    imageUrl: imageUrl !== undefined ? imageUrl : familyMembers[index].imageUrl,
+    address: address !== undefined ? address : familyMembers[index].address,
+    phone: phone !== undefined ? phone : familyMembers[index].phone,
+    voiceNoteText: voiceNoteText !== undefined ? voiceNoteText : familyMembers[index].voiceNoteText,
+  };
+  res.json(familyMembers[index]);
+});
+
 // Activity Session Logs
 app.get('/api/activities/log', (req, res) => {
   res.json(activityLogs);

@@ -21,6 +21,7 @@ import { LinkedElder, sandboxStorage } from '../../services/sandboxStorage';
 interface FamilyViewProps {
   familyMembers: FamilyMemberItem[];
   onAddFamilyMember: (item: Omit<FamilyMemberItem, 'id'>) => void;
+  onUpdateFamilyMember?: (item: FamilyMemberItem) => void;
   safeZoneRadius: number;
   onUpdateRadius: (r: number) => void;
   zoneEvents: ZoneEventItem[];
@@ -32,6 +33,7 @@ interface FamilyViewProps {
 export const FamilyView: React.FC<FamilyViewProps> = ({
   familyMembers,
   onAddFamilyMember,
+  onUpdateFamilyMember,
   safeZoneRadius,
   onUpdateRadius,
   zoneEvents,
@@ -41,15 +43,9 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
 }) => {
   const isCompanion = userRole === 'companion';
 
-  // Default to 'memorybook' for companion so elder sees their warm memory book first
-  const [activeTab, setActiveTab] = useState<'overview' | 'memorybook' | 'safety' | 'log' | 'alerts'>(
-    isCompanion ? 'memorybook' : 'overview'
-  );
-
-  // Linked elders state
+  // Linked elders state (for caregiver oversight)
   const [linkedElders, setLinkedElders] = useState<LinkedElder[]>(() => sandboxStorage.getLinkedElders());
   const [currentElderId, setCurrentElderId] = useState<string>('SHY-9021');
-
   const currentElder = linkedElders.find((e) => e.id === currentElderId) || linkedElders[0];
 
   const handleLinkNewElder = (id: string, name: string, location: string, relationTag: string) => {
@@ -66,6 +62,23 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
     setCurrentElderId(id);
   };
 
+  // If elder companion is using the tablet, show their personal, distraction-free Memory Book
+  if (isCompanion) {
+    return (
+      <MemoryBookView
+        familyMembers={familyMembers}
+        onAddFamilyMember={onAddFamilyMember}
+        onUpdateFamilyMember={onUpdateFamilyMember}
+        showToast={showToast}
+        elderName={currentElder?.name || 'Bimala aita'}
+        onNavigateToInsights={onNavigateToInsights}
+      />
+    );
+  }
+
+  // Caregiver view state
+  const [activeTab, setActiveTab] = useState<'overview' | 'memorybook' | 'safety' | 'log' | 'alerts'>('overview');
+
   const maxR = 1500;
   const svgRadius = 30 + (safeZoneRadius / maxR) * 60;
 
@@ -74,7 +87,7 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 font-baloo font-bold text-xs text-[#22403A] uppercase tracking-wider">
           <Users className="w-3.5 h-3.5" />
-          {isCompanion ? 'My Family & Memory Album' : 'Caregiver Oversight'}
+          Caregiver Family Oversight
         </div>
 
         {onNavigateToInsights && (
@@ -83,16 +96,19 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F1E7CE] text-[#22403A] hover:bg-[#E6DAB9] font-baloo font-bold text-xs transition-colors cursor-pointer self-start sm:self-auto"
           >
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>Open {isCompanion ? 'My Insights' : 'Care Insights'} Page &rarr;</span>
+            <span>Open Care Insights Page &rarr;</span>
           </button>
         )}
       </div>
 
-      <h2 className="font-fraunces text-2xl md:text-3xl font-medium text-[#221F1B] mb-5">
-        {isCompanion ? `${currentElder?.name}’s Family & Memory Book` : `${currentElder?.name}’s Care & Safety`}
+      <h2 className="font-fraunces text-2xl md:text-3xl font-medium text-[#221F1B] mb-1">
+        Family Dashboard &amp; Care Hub
       </h2>
+      <p className="text-xs sm:text-sm text-[#665F51] mb-5">
+        Monitor safe perimeter zones, review daily care notes, and curate {currentElder?.name}’s Memory Book.
+      </p>
 
-      {/* Linked Elder Switcher */}
+      {/* Linked Elder Switcher (Caregiver only) */}
       <ElderSwitcher
         linkedElders={linkedElders}
         currentElderId={currentElderId}
@@ -101,11 +117,11 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
         showToast={showToast}
       />
 
-      {/* Tabs */}
+      {/* Caregiver Tabs */}
       <div className="flex flex-wrap gap-2 p-1 bg-[#F1E7CE] rounded-full w-fit mb-6">
         {[
-          { id: 'memorybook', label: 'Memory Book' },
           { id: 'overview', label: 'Care Overview' },
+          { id: 'memorybook', label: `Memory Book (${currentElder?.name})` },
           { id: 'safety', label: 'Safe Area & GPS' },
           { id: 'log', label: 'Activity Log' },
           { id: 'alerts', label: 'Care Alerts (2)' },
@@ -124,11 +140,12 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
         ))}
       </div>
 
-      {/* MEMORY BOOK TAB (Full rich MemoryBookView component with image, address, phone, and voice notes) */}
+      {/* MEMORY BOOK TAB (Allows Caregiver to curate the elder's album) */}
       {activeTab === 'memorybook' && (
         <MemoryBookView
           familyMembers={familyMembers}
           onAddFamilyMember={onAddFamilyMember}
+          onUpdateFamilyMember={onUpdateFamilyMember}
           showToast={showToast}
           elderName={currentElder?.name}
           onNavigateToInsights={onNavigateToInsights}
