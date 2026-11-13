@@ -24,7 +24,7 @@ interface ElderSwitcherProps {
   showToast: (message: string, icon?: string) => void;
 }
 
-const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
+export const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
   linkedElders,
   currentElderId,
   onSelectElder,
@@ -302,4 +302,3 @@ const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
   );
 };
 
-export default ElderSwitcher;

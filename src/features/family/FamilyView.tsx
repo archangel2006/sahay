@@ -76,19 +76,11 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
     avatarColor: '#3E4F74',
   };
 
-  try {
-    const updated = await api.linkElder(newElder);
+  const updated = await api.linkElder(newElder);
 
-    setLinkedElders(updated);
-    setCurrentElderId(id);
-
-    showToast('Elder linked successfully', 'check');
-  } catch (error) {
-    showToast(
-      error instanceof Error ? error.message : 'Could not link elder',
-      'alert'
-    );
-  }
+  setLinkedElders(updated);
+  setCurrentElderId(id);
+  showToast('Elder linked successfully', 'check');
 };
 
   // If elder companion is using the tablet, show their personal, distraction-free Memory Book
