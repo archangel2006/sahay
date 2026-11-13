@@ -11,10 +11,37 @@ import {
   FamilyMemberItem,
   ZoneEventItem,
 } from '../types';
-import { sandboxStorage } from './sandboxStorage';
+import { sandboxStorage, type LinkedElder } from './sandboxStorage';
 
 export const api = {
   // Reminders
+    // Linked Elders
+  async getLinkedElders(): Promise<LinkedElder[]> {
+    try {
+      return sandboxStorage.getLinkedElders();
+    } catch (error) {
+      console.error('Could not load linked elders:', error);
+      return [];
+    }
+  },
+
+  async linkElder(elder: LinkedElder): Promise<LinkedElder[]> {
+    const current = sandboxStorage.getLinkedElders();
+
+    // Prevent duplicate elder codes
+    const alreadyLinked = current.some(
+      (item) => item.id.toUpperCase() === elder.id.toUpperCase()
+    );
+
+    if (alreadyLinked) {
+      throw new Error('This elder is already linked.');
+    }
+
+    const updated = [...current, elder];
+    sandboxStorage.saveLinkedElders(updated);
+
+    return updated;
+  },
   async getReminders(): Promise<ReminderItem[]> {
     try {
       const res = await fetch('/api/reminders');

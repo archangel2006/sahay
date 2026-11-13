@@ -17,6 +17,7 @@ import { FamilyMemberItem, ZoneEventItem, UserRole } from '../../types';
 import { ElderSwitcher } from './ElderSwitcher';
 import { MemoryBookView } from './MemoryBookView';
 import { LinkedElder, sandboxStorage } from '../../services/sandboxStorage';
+import { api } from '../../services/api';
 
 interface FamilyViewProps {
   familyMembers: FamilyMemberItem[];
@@ -43,24 +44,52 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
 }) => {
   const isCompanion = userRole === 'companion';
 
-  // Linked elders state (for caregiver oversight)
-  const [linkedElders, setLinkedElders] = useState<LinkedElder[]>(() => sandboxStorage.getLinkedElders());
-  const [currentElderId, setCurrentElderId] = useState<string>('SHY-9021');
-  const currentElder = linkedElders.find((e) => e.id === currentElderId) || linkedElders[0];
+  const [activeTab, setActiveTab] = useState<
+  'overview' | 'memorybook' | 'safety' | 'log' | 'alerts'
+>('overview');
 
-  const handleLinkNewElder = (id: string, name: string, location: string, relationTag: string) => {
-    const newElder: LinkedElder = {
-      id,
-      name,
-      location,
-      relationTag,
-      avatarColor: '#3E4F74',
-    };
-    const updated = [...linkedElders, newElder];
-    setLinkedElders(updated);
-    sandboxStorage.saveLinkedElders(updated);
-    setCurrentElderId(id);
+  // Linked elders state (for caregiver oversight)
+  const [linkedElders, setLinkedElders] = useState<LinkedElder[]>(
+    () => sandboxStorage.getLinkedElders()
+  );
+
+  const [currentElderId, setCurrentElderId] = useState<string>(() => {
+    const elders = sandboxStorage.getLinkedElders();
+    return elders[0]?.id || '';
+  });
+
+  const currentElder =
+    linkedElders.find((elder) => elder.id === currentElderId) ||
+    linkedElders[0];
+
+  const handleLinkNewElder = async (
+  id: string,
+  name: string,
+  location: string,
+  relationTag: string
+) => {
+  const newElder: LinkedElder = {
+    id,
+    name,
+    location,
+    relationTag,
+    avatarColor: '#3E4F74',
   };
+
+  try {
+    const updated = await api.linkElder(newElder);
+
+    setLinkedElders(updated);
+    setCurrentElderId(id);
+
+    showToast('Elder linked successfully', 'check');
+  } catch (error) {
+    showToast(
+      error instanceof Error ? error.message : 'Could not link elder',
+      'alert'
+    );
+  }
+};
 
   // If elder companion is using the tablet, show their personal, distraction-free Memory Book
   if (isCompanion) {
@@ -75,9 +104,6 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
       />
     );
   }
-
-  // Caregiver view state
-  const [activeTab, setActiveTab] = useState<'overview' | 'memorybook' | 'safety' | 'log' | 'alerts'>('overview');
 
   const maxR = 1500;
   const svgRadius = 30 + (safeZoneRadius / maxR) * 60;
