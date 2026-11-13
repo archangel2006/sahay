@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Leaf, Sun, Mountain, Droplet, Eye, Check, RefreshCw } from 'lucide-react';
+import {
+  Leaf,
+  Sun,
+  Mountain,
+  Droplet,
+  Flower2,
+  TreePine,
+  Bird,
+  Sprout,
+  Check,
+  RefreshCw,
+} from 'lucide-react';
 
 interface MemoryMatchProps {
   onSessionComplete?: (stats: { moves: number; accuracy: number }) => void;
@@ -102,8 +113,9 @@ export const MemoryMatch: React.FC<MemoryMatchProps> = ({ onSessionComplete, sho
   const renderIcon = (name: string) => {
     switch (name) {
       case 'leaf':
-      case 'leaf-alt':
         return <Leaf className="w-6 h-6 text-white" />;
+      case 'leaf-alt':
+        return <Sprout className="w-6 h-6 text-white" />;
       case 'sun':
         return <Sun className="w-6 h-6 text-white" />;
       case 'mountain':
@@ -111,7 +123,11 @@ export const MemoryMatch: React.FC<MemoryMatchProps> = ({ onSessionComplete, sho
       case 'droplet':
         return <Droplet className="w-6 h-6 text-white" />;
       case 'flower':
-        return <Eye className="w-6 h-6 text-white" />;
+        return <Flower2 className="w-6 h-6 text-white" />;
+      case 'tree':
+        return <TreePine className="w-6 h-6 text-white" />;
+      case 'bird':
+        return <Bird className="w-6 h-6 text-white" />;
       default:
         return <Leaf className="w-6 h-6 text-white" />;
     }
