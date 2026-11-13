@@ -58,7 +58,7 @@ export const ACTIVITIES: ActivityMeta[] = [
     category: 'Executive Function',
     level: 1,
     maxLevel: 3,
-    status: 'contribute', // Open for contributor PR
+    status: 'active',
     iconName: 'sparkles',
   },
   {
