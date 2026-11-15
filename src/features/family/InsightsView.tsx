@@ -12,9 +12,11 @@ import {
   Sparkles,
   Navigation,
   Info,
+  FileText,
 } from 'lucide-react';
 import { ZoneEventItem, UserRole } from '../../types';
 import { LinkedElder } from '../../services/sandboxStorage';
+import { ClinicalReportModal } from './ClinicalReportModal';
 
 interface InsightsViewProps {
   userRole: UserRole;
@@ -39,6 +41,7 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
   const elderName = currentElder?.name || 'Bimala aita';
 
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'safety' | 'cognitive' | 'alerts'>('overview');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const maxR = 1500;
   const svgRadius = 30 + (safeZoneRadius / maxR) * 60;
@@ -62,12 +65,23 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
           </p>
         </div>
 
-        {isCompanion && (
-          <div className="flex items-center gap-2 px-3.5 py-2 bg-[#E4ECE7] text-[#22403A] rounded-xl border border-[#22403A]/20">
-            <Heart className="w-4 h-4 text-[#BD5B3B]" />
-            <span className="font-baloo font-bold text-xs">Everything is looking gentle &amp; steady today</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {isCompanion ? (
+            <div className="flex items-center gap-2 px-3.5 py-2 bg-[#E4ECE7] text-[#22403A] rounded-xl border border-[#22403A]/20">
+              <Heart className="w-4 h-4 text-[#BD5B3B]" />
+              <span className="font-baloo font-bold text-xs">Everything is looking gentle &amp; steady today</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsReportModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#22403A] text-[#FBF7EE] font-baloo font-bold text-xs hover:bg-[#152B26] transition-colors cursor-pointer shadow-xs"
+            >
+              <FileText className="w-4 h-4 text-[#E2A33D]" />
+              <span>Export Doctor Report (PDF)</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Sub-tabs */}
@@ -377,6 +391,17 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Clinical Care Report Modal */}
+      <ClinicalReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        elderName={elderName}
+        elderId={currentElder?.id || 'SHY-9021'}
+        safeZoneRadius={safeZoneRadius}
+        zoneEvents={zoneEvents}
+        showToast={showToast}
+      />
     </div>
   );
 };
