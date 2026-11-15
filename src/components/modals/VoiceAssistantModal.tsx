@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Mic, X, Send, Sparkles, Volume2, ArrowRight } from 'lucide-react';
 import { api } from '../../services/api';
 import { SupportedLanguage } from '../../types';
@@ -21,10 +21,16 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (!isOpen) {
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+      }
       setResponse(null);
       setIsListening(false);
       setIsSpeaking(false);
@@ -72,16 +78,78 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     }
   };
 
-  const simulateSpeechMic = () => {
-    if (isListening) return;
-    setIsListening(true);
-    showToast('Listening to your voice…', 'mic');
-    setTimeout(() => {
+  const toggleSpeechRecognition = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
       setIsListening(false);
-      const spoken = language === 'Assamese' ? 'মোৰ আজিৰ ঔষধ খোৱা হ’লনে?' : 'Did I take my morning medicine today?';
-      setPrompt(spoken);
-      handleSend(spoken);
-    }, 1800);
+      return;
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      showToast('Speech recognition not supported in this browser. Please type below.', 'alert');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      // Map language code dynamically
+      let langCode = 'en-IN';
+      if (language === 'Assamese') {
+        langCode = 'as-IN';
+      } else if (language === 'Bodo' || language === 'Manipuri' || language === 'Khasi' || language === 'Mizo') {
+        langCode = 'en-IN'; // Default regional English if native speech engine lacks tribal locale
+      }
+      recognition.lang = langCode;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        showToast('Listening… Speak into your microphone', 'mic');
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setPrompt(transcript);
+
+        if (event.results[0] && event.results[0].isFinal) {
+          const finalQuery = transcript.trim();
+          if (finalQuery) {
+            handleSend(finalQuery);
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          showToast('Microphone access denied. Please allow microphone permissions.', 'alert');
+        } else if (event.error !== 'no-speech') {
+          showToast(`Speech recognition notice: ${event.error}`, 'alert');
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch (err) {
+      setIsListening(false);
+      showToast('Could not access microphone speech engine. Please type below.', 'alert');
+    }
   };
 
   const samplePrompts = [
@@ -117,7 +185,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
             <button
               type="button"
-              onClick={simulateSpeechMic}
+              onClick={toggleSpeechRecognition}
               className={`relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl cursor-pointer ${
                 isListening
                   ? 'bg-gradient-to-tr from-[#BD5B3B] to-[#E2A33D] scale-110 ring-4 ring-[#E2A33D]/40'
