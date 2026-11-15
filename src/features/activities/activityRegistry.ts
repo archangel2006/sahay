@@ -68,7 +68,7 @@ export const ACTIVITIES: ActivityMeta[] = [
     category: 'Working Memory',
     level: 1,
     maxLevel: 6,
-    status: 'contribute', // Open for contributor PR
+    status: 'active',
     iconName: 'hash',
   },
 ];
