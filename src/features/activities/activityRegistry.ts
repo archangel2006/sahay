@@ -48,7 +48,7 @@ export const ACTIVITIES: ActivityMeta[] = [
     category: 'Memory',
     level: 1,
     maxLevel: 3,
-    status: 'contribute', // Open for contributor PR
+    status: 'active',
     iconName: 'user',
   },
   {

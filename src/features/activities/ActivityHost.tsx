@@ -7,6 +7,7 @@ import { PatternRecall } from './games/PatternRecall';
 import { RoutineRecall } from './games/RoutineRecall';
 import { SpotDifference } from './games/SpotDifference';
 import { OddOneOut } from './games/OddOneOut';
+import { FaceFamilyMatch } from './games/FaceFamilyMatch';
 import { ContributePlaceholder } from './games/ContributePlaceholder';
 
 interface ActivityHostProps {
@@ -34,9 +35,10 @@ export const ActivityHost: React.FC<ActivityHostProps> = ({
         return <RoutineRecall onSessionComplete={onSessionComplete} showToast={showToast} />;
       case 'spot':
         return <SpotDifference onSessionComplete={onSessionComplete} showToast={showToast} />;
+      case 'faces':
+        return <FaceFamilyMatch onSessionComplete={onSessionComplete} showToast={showToast} />;
       case 'odd':
         return <OddOneOut onSessionComplete={onSessionComplete} showToast={showToast} />;
-      case 'faces':
       case 'numbers':
       default:
         return <ContributePlaceholder activity={meta} showToast={showToast} />;
