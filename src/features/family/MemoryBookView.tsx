@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Users,
   Plus,
@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { FamilyMemberItem } from '../../types';
+import { VoiceNoteRecorder } from './VoiceNoteRecorder';
 
 interface MemoryBookViewProps {
   familyMembers: FamilyMemberItem[];
@@ -34,6 +35,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
   onNavigateToInsights,
 }) => {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -48,7 +50,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
   const [address, setAddress] = useState('');
   const [voiceNoteText, setVoiceNoteText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | undefined>(undefined);
 
   // Edit Form state
   const [editName, setEditName] = useState('');
@@ -58,6 +60,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
   const [editAddress, setEditAddress] = useState('');
   const [editVoiceNoteText, setEditVoiceNoteText] = useState('');
   const [editImageUrl, setEditImageUrl] = useState('');
+  const [editAudioUrl, setEditAudioUrl] = useState<string | undefined>(undefined);
 
   const samplePhotoAvatars = [
     { label: 'Son / Elder Man', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80' },
@@ -66,14 +69,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
     { label: 'Elder Friend', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80' },
   ];
 
-  const playVoiceNote = (member: FamilyMemberItem) => {
-    if (playingId === member.id) {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      setPlayingId(null);
-      return;
-    }
-
-    setPlayingId(member.id);
+  const fallbackSpeech = (member: FamilyMemberItem) => {
     const message = member.voiceNoteText || `Namaskar ${elderName}! We are thinking of you and sending our warmest love.`;
     showToast(`Playing voice greeting from ${member.name}…`, 'play');
 
@@ -92,6 +88,47 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
     } else {
       setTimeout(() => setPlayingId(null), 3000);
     }
+  };
+
+  const playVoiceNote = (member: FamilyMemberItem) => {
+    if (playingId === member.id) {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      setPlayingId(null);
+      return;
+    }
+
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    setPlayingId(member.id);
+
+    if (member.audioUrl) {
+      showToast(`Playing recorded voice greeting from ${member.name}…`, 'play');
+      const audio = new Audio(member.audioUrl);
+      currentAudioRef.current = audio;
+      audio.onended = () => {
+        setPlayingId(null);
+        currentAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        currentAudioRef.current = null;
+        fallbackSpeech(member);
+      };
+      audio.play().catch(() => {
+        currentAudioRef.current = null;
+        fallbackSpeech(member);
+      });
+      return;
+    }
+
+    fallbackSpeech(member);
   };
 
   const handleCallMember = (member: FamilyMemberItem) => {
@@ -119,6 +156,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
     setEditAddress(member.address || '');
     setEditVoiceNoteText(member.voiceNoteText || '');
     setEditImageUrl(member.imageUrl || '');
+    setEditAudioUrl(member.audioUrl);
     // If detail modal was open, close it while editing
     setSelectedMember(null);
   };
@@ -140,6 +178,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
       phone: editPhone.trim() || undefined,
       address: editAddress.trim() || undefined,
       voiceNoteText: editVoiceNoteText.trim() || undefined,
+      audioUrl: editAudioUrl || undefined,
     };
 
     if (onUpdateFamilyMember) {
@@ -168,6 +207,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
       phone: phone.trim() || undefined,
       address: address.trim() || undefined,
       voiceNoteText: voiceNoteText.trim() || undefined,
+      audioUrl: audioUrl || undefined,
     });
 
     setName('');
@@ -177,6 +217,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
     setAddress('');
     setVoiceNoteText('');
     setImageUrl('');
+    setAudioUrl(undefined);
     setIsAddModalOpen(false);
     showToast(`${name} added to the Memory Book!`, 'check');
   };
@@ -287,11 +328,16 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                     <Sparkles className="w-3 h-3 text-[#E2A33D]" />
                     Tap card to view full story &amp; map
                   </span>
-                  {member.voiceNoteText && (
+                  {member.audioUrl ? (
+                    <span className="text-[10px] font-bold text-[#22403A] bg-[#E4ECE7] px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Mic className="w-2.5 h-2.5 text-[#BD5B3B]" />
+                      Recorded audio
+                    </span>
+                  ) : member.voiceNoteText ? (
                     <span className="text-[10px] font-bold text-[#22403A] bg-[#E4ECE7] px-2 py-0.5 rounded-full">
                       Voice note ready
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-1">
@@ -427,11 +473,23 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
               {/* Voice Greeting Player */}
               <div className="p-4 bg-[#E4ECE7]/70 rounded-2xl border border-[#22403A]/20 flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <span className="text-xs font-baloo font-bold text-[#22403A] block mb-0.5">
-                    Recorded Voice Note
+                  <span className="text-xs font-baloo font-bold text-[#22403A] flex items-center gap-1.5 mb-0.5">
+                    {selectedMember.audioUrl ? (
+                      <>
+                        <Mic className="w-3.5 h-3.5 text-[#BD5B3B]" />
+                        <span>Recorded Audio Voice Note</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-3.5 h-3.5 text-[#22403A]" />
+                        <span>Voice Greeting Note</span>
+                      </>
+                    )}
                   </span>
                   <p className="text-xs text-[#665F51] truncate italic">
-                    "{selectedMember.voiceNoteText || 'Namaskar! Thinking of you.'}"
+                    {selectedMember.audioUrl
+                      ? 'Personal audio recording from loved one'
+                      : `"${selectedMember.voiceNoteText || 'Namaskar! Thinking of you.'}"`}
                   </p>
                 </div>
 
@@ -591,7 +649,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
 
               <div>
                 <label className="block text-xs font-baloo font-bold text-[#665F51] mb-1">
-                  Spoken Voice Greeting
+                  Spoken Voice Greeting (Text Fallback)
                 </label>
                 <input
                   type="text"
@@ -601,6 +659,11 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                   className="w-full px-3.5 py-2 rounded-xl border border-[#E6DAB9] text-sm focus:outline-2 focus:outline-[#22403A]"
                 />
               </div>
+
+              <VoiceNoteRecorder
+                initialAudioUrl={editAudioUrl}
+                onAudioChange={setEditAudioUrl}
+              />
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -746,7 +809,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
 
               <div>
                 <label className="block text-xs font-baloo font-bold text-[#665F51] mb-1">
-                  Spoken Voice Greeting
+                  Spoken Voice Greeting (Text Fallback)
                 </label>
                 <input
                   type="text"
@@ -756,6 +819,11 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                   className="w-full px-3.5 py-2 rounded-xl border border-[#E6DAB9] text-sm focus:outline-2 focus:outline-[#22403A]"
                 />
               </div>
+
+              <VoiceNoteRecorder
+                initialAudioUrl={audioUrl}
+                onAudioChange={setAudioUrl}
+              />
 
               <div className="flex gap-3 pt-2">
                 <button
