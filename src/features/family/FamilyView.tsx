@@ -48,13 +48,14 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   const [currentElderId, setCurrentElderId] = useState<string>('SHY-9021');
   const currentElder = linkedElders.find((e) => e.id === currentElderId) || linkedElders[0];
 
-  const handleLinkNewElder = (id: string, name: string, location: string, relationTag: string) => {
+  const handleLinkNewElder = (id: string, name: string, location: string, relationTag: string, pin?: string) => {
     const newElder: LinkedElder = {
       id,
       name,
       location,
       relationTag,
       avatarColor: '#3E4F74',
+      pin: pin || '1234',
     };
     const updated = [...linkedElders, newElder];
     setLinkedElders(updated);

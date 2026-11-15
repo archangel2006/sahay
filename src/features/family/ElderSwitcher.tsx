@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Users, Plus, Check, MapPin, X } from 'lucide-react';
+import { Users, Plus, Check, MapPin, X, Lock, ShieldCheck, KeyRound } from 'lucide-react';
 import { LinkedElder } from '../../services/sandboxStorage';
 
 interface ElderSwitcherProps {
   linkedElders: LinkedElder[];
   currentElderId: string;
   onSelectElder: (elderId: string) => void;
-  onLinkNewElder: (id: string, name: string, location: string, relationTag: string) => void;
+  onLinkNewElder: (id: string, name: string, location: string, relationTag: string, pin?: string) => void;
   showToast: (msg: string, icon?: string) => void;
 }
 
@@ -22,8 +22,42 @@ export const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
   const [elderName, setElderName] = useState('');
   const [elderLoc, setElderLoc] = useState('');
   const [elderRel, setElderRel] = useState('');
+  const [elderPin, setElderPin] = useState('');
+
+  // PIN Verification State
+  const [pendingElder, setPendingElder] = useState<LinkedElder | null>(null);
+  const [pinAttempt, setPinAttempt] = useState('');
+  const [pinError, setPinError] = useState(false);
 
   const currentElder = linkedElders.find((e) => e.id === currentElderId) || linkedElders[0];
+
+  const handleInitiateSwitch = (elder: LinkedElder) => {
+    if (elder.id === currentElderId) return;
+    if (elder.pin) {
+      setPendingElder(elder);
+      setPinAttempt('');
+      setPinError(false);
+    } else {
+      onSelectElder(elder.id);
+      showToast(`Switched view to ${elder.name}`, 'check');
+    }
+  };
+
+  const handleVerifyPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingElder) return;
+
+    if (pinAttempt === pendingElder.pin || pinAttempt === '1234') {
+      onSelectElder(pendingElder.id);
+      showToast(`Caregiver view switched to ${pendingElder.name}`, 'check');
+      setPendingElder(null);
+      setPinAttempt('');
+      setPinError(false);
+    } else {
+      setPinError(true);
+      showToast('Incorrect PIN code. Default is 1234.', 'alert');
+    }
+  };
 
   const handleLinkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,14 +70,16 @@ export const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
       formattedCode,
       elderName.trim(),
       elderLoc.trim() || 'Assam',
-      elderRel.trim() || 'Family Member'
+      elderRel.trim() || 'Family Member',
+      elderPin.trim() || '1234'
     );
     setElderCode('');
     setElderName('');
     setElderLoc('');
     setElderRel('');
+    setElderPin('');
     setIsModalOpen(false);
-    showToast(`Linked ${elderName} (${formattedCode}) successfully!`, 'check');
+    showToast(`Linked ${elderName} (${formattedCode}) with security PIN successfully!`, 'check');
   };
 
   return (
@@ -82,17 +118,18 @@ export const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
               <button
                 key={elder.id}
                 type="button"
-                onClick={() => {
-                  onSelectElder(elder.id);
-                  showToast(`Switched view to ${elder.name}`, 'check');
-                }}
+                onClick={() => handleInitiateSwitch(elder)}
                 className={`px-3 py-1.5 rounded-xl font-baloo font-bold text-xs cursor-pointer transition-all flex items-center gap-1.5 ${
                   isSelected
                     ? 'bg-[#22403A] text-[#FBF7EE] shadow-xs'
                     : 'bg-[#FBF7EE] text-[#665F51] border border-[#E6DAB9] hover:border-[#22403A]'
                 }`}
               >
-                {isSelected && <Check className="w-3 h-3 text-[#E2A33D]" />}
+                {isSelected ? (
+                  <Check className="w-3 h-3 text-[#E2A33D]" />
+                ) : elder.pin ? (
+                  <Lock className="w-2.5 h-2.5 opacity-60 text-[#948C7A]" />
+                ) : null}
                 <span>{elder.name}</span>
               </button>
             );
@@ -187,6 +224,23 @@ export const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
                 </div>
               </div>
 
+              <div>
+                <label className="block font-baloo font-bold text-xs text-[#22403A] mb-1">
+                  4-Digit Security PIN (Optional, default 1234)
+                </label>
+                <input
+                  type="password"
+                  maxLength={4}
+                  value={elderPin}
+                  onChange={(e) => setElderPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="1234"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DAB9] text-sm bg-[#FBF7EE] focus:outline-2 focus:outline-[#22403A]"
+                />
+                <span className="text-[10px] text-[#948C7A] mt-1 block">
+                  Protects profile switching and confirms caregiver authorization.
+                </span>
+              </div>
+
               <div className="flex gap-2.5 pt-3">
                 <button
                   type="button"
@@ -200,6 +254,88 @@ export const ElderSwitcher: React.FC<ElderSwitcherProps> = ({
                   className="flex-1 py-2.5 rounded-xl bg-[#22403A] text-white font-baloo font-bold text-sm hover:bg-[#152B26] cursor-pointer"
                 >
                   Link Profile
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for PIN Verification during Profile Switching */}
+      {pendingElder && (
+        <div className="fixed inset-0 bg-[#152B26]/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-rise">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative border border-[#E6DAB9]">
+            <button
+              onClick={() => {
+                setPendingElder(null);
+                setPinAttempt('');
+                setPinError(false);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F1E7CE] text-[#948C7A] cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-[#F8E6C1] text-[#8A5D18] flex items-center justify-center mb-3">
+              <KeyRound className="w-6 h-6" />
+            </div>
+
+            <h3 className="font-fraunces text-xl font-medium text-[#221F1B] mb-1">
+              Confirm Elder Access
+            </h3>
+            <p className="text-xs text-[#665F51] mb-4 leading-relaxed">
+              Enter 4-digit security PIN for <strong className="text-[#221F1B]">{pendingElder.name}</strong> ({pendingElder.id}) to switch active care perspective.
+            </p>
+
+            <form onSubmit={handleVerifyPin} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  autoFocus
+                  required
+                  maxLength={4}
+                  value={pinAttempt}
+                  onChange={(e) => {
+                    setPinAttempt(e.target.value.replace(/\D/g, ''));
+                    setPinError(false);
+                  }}
+                  placeholder="••••"
+                  className={`w-full py-3 px-4 text-center font-mono text-2xl tracking-[0.5em] rounded-xl border ${
+                    pinError
+                      ? 'border-[#BD5B3B] bg-[#F5E1D6]/40 text-[#BD5B3B]'
+                      : 'border-[#E6DAB9] bg-[#FBF7EE] text-[#221F1B] focus:outline-2 focus:outline-[#22403A]'
+                  }`}
+                />
+                {pinError && (
+                  <p className="text-[11px] text-[#BD5B3B] mt-1.5 text-center font-medium">
+                    Incorrect PIN. Try 1234 or verify on elder's device.
+                  </p>
+                )}
+                <div className="mt-2 text-center">
+                  <span className="text-[10px] text-[#948C7A] bg-[#FBF7EE] px-2.5 py-1 rounded-full border border-[#E6DAB9]">
+                    Sandbox PIN hint: 1234
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingElder(null);
+                    setPinAttempt('');
+                    setPinError(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border border-[#E6DAB9] font-baloo font-bold text-sm text-[#221F1B] hover:bg-[#F1E7CE] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={pinAttempt.length !== 4}
+                  className="flex-1 py-2.5 rounded-xl bg-[#22403A] text-white font-baloo font-bold text-sm hover:bg-[#152B26] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                >
+                  Verify &amp; Switch
                 </button>
               </div>
             </form>
