@@ -190,12 +190,12 @@ export const api = {
   },
 
   // AI Assistant Chat
-  async askAssistant(prompt: string, language: string = 'English'): Promise<string> {
+  async askAssistant(prompt: string, language: string = 'English', context?: any): Promise<string> {
     try {
       const res = await fetch('/api/assistant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, language }),
+        body: JSON.stringify({ prompt, language, context }),
       });
       const data = await res.json();
       return data.reply || 'Namaskar! I am here with you.';

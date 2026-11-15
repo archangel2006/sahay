@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, X, Send, Sparkles, Volume2, ArrowRight } from 'lucide-react';
 import { api } from '../../services/api';
+import { sandboxStorage } from '../../services/sandboxStorage';
 import { SupportedLanguage } from '../../types';
 
 interface VoiceAssistantModalProps {
@@ -57,7 +58,17 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     setIsLoading(true);
     setResponse(null);
     try {
-      const reply = await api.askAssistant(query, language);
+      const reminders = sandboxStorage.getReminders();
+      const appointments = sandboxStorage.getAppointments();
+      const safety = sandboxStorage.getSafety();
+      const context = {
+        elderName: 'Bimala aita',
+        reminders,
+        appointments,
+        safeZoneStatus: `Safe perimeter at home (${safety.radius}m)`,
+        streakDays: 6,
+      };
+      const reply = await api.askAssistant(query, language, context);
       setResponse(reply);
       setPrompt('');
       speakText(reply);

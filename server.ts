@@ -119,18 +119,42 @@ app.get('/api/health', (req, res) => {
 // Assistant Chat endpoint with Gemini
 app.post('/api/assistant/chat', async (req, res) => {
   try {
-    const { prompt, language = 'English' } = req.body;
+    const { prompt, language = 'English', context } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
     const ai = getGenAI();
     if (!ai) {
-      // Graceful fallback if GEMINI_API_KEY is not configured yet
+      // Graceful context-aware fallback if GEMINI_API_KEY is not configured yet
+      let fallbackReply = `Namaskar! I have noted your message: "${prompt}". Your daily schedule is intact, your streak is active, and Ranjit (son) has been notified.`;
+      if (context?.reminders && prompt.toLowerCase().includes('medicine')) {
+        const med = context.reminders.find(
+          (r: any) => r.txt.toLowerCase().includes('medicine') || r.icon === 'pill'
+        );
+        if (med) {
+          fallbackReply = med.done
+            ? `Namaskar! Yes, your ${med.txt} is marked as completed for today. You are right on track!`
+            : `Namaskar! Your ${med.txt} is scheduled for ${med.time} and is waiting for you.`;
+        }
+      }
       return res.json({
-        reply: `Namaskar! I have noted your message: "${prompt}". Your daily schedule is intact, your 6-day streak is active, and Ranjit (son) has been notified.`,
+        reply: fallbackReply,
         source: 'fallback',
       });
+    }
+
+    let contextInstruction = '';
+    if (context) {
+      const { elderName = 'Bimala aita', reminders: ctxReminders = [], appointments: ctxAppts = [], safeZoneStatus = 'Within safe perimeter at home', streakDays = 6 } = context;
+      contextInstruction = `\nLive Daily Schedule & Telemetry for ${elderName}:
+- Streak: ${streakDays}-day activity streak
+- Safe Area Status: ${safeZoneStatus}
+- Today's Care Reminders:
+${ctxReminders.length > 0 ? ctxReminders.map((r: any) => `  * ${r.txt} (${r.time}): ${r.done ? 'COMPLETED / TAKEN' : 'PENDING'}`).join('\n') : '  * All routine items on schedule'}
+- Upcoming Appointments:
+${ctxAppts.length > 0 ? ctxAppts.map((a: any) => `  * ${a.title} on ${a.date} ${a.month} at ${a.time} (${a.mode})`).join('\n') : '  * No upcoming clinical appointments today'}
+When the elder asks questions about their medicine status, schedule, or appointments, use this live snapshot to give a factual, warm, and reassuring response.`;
     }
 
     const systemInstruction = `You are Sahay, a compassionate, patient, and culturally respectful AI care assistant designed specifically for elderly people in North-East India (such as Assam, Meghalaya, Manipur, Mizoram).
@@ -139,7 +163,7 @@ Your user may be an elder like Bimala aita.
 - Speak with elder-friendly respect (use respectful honorifics like "Aita", "Deuta", "Namaskar", "Khublei").
 - Language preference: ${language}. If asked in Assamese, Bodo, Khasi, Manipuri, Mizo, or English, answer empathetically in that language.
 - Provide reassurance about their daily routine, medicine timings, family connection, and gentle cognitive well-being.
-- Never use clinical jargon or alarming warnings.`;
+- Never use clinical jargon or alarming warnings.${contextInstruction}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
