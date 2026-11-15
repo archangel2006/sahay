@@ -109,12 +109,11 @@ export default function App() {
   };
 
   const handleToggleLanguage = () => {
-    const nextLang = language === 'English' ? 'Assamese' : 'English';
+    const supported: SupportedLanguage[] = ['English', 'Assamese', 'Bodo', 'Khasi', 'Manipuri', 'Mizo'];
+    const currentIndex = supported.indexOf(language);
+    const nextLang = supported[(currentIndex + 1) % supported.length];
     setLanguage(nextLang);
-    showToast(
-      nextLang === 'Assamese' ? 'ভাষা অসমীয়ালৈ সলনি কৰা হ’ল' : 'Language switched to English',
-      'globe'
-    );
+    showToast(`Language switched to ${nextLang}`, 'globe');
   };
 
   const handleToggleReminder = async (id: string) => {
@@ -194,6 +193,7 @@ export default function App() {
         onOpenSos={() => setIsSosModalOpen(true)}
         onLogout={handleLogout}
         userRole={userRole}
+        language={language}
       />
 
       {/* Main Content Area */}
@@ -208,6 +208,7 @@ export default function App() {
           onOpenSos={() => setIsSosModalOpen(true)}
           onLogout={handleLogout}
           userRole={userRole}
+          language={language}
         />
 
         {/* Topbar */}
@@ -233,6 +234,7 @@ export default function App() {
               showToast={showToast}
               elderId="SHY-9021"
               elderName="Bimala aita"
+              language={language}
             />
           )}
 

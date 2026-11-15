@@ -12,7 +12,8 @@ import {
   LogOut,
   Heart,
 } from 'lucide-react';
-import { PageId, UserRole } from '../../types';
+import { PageId, UserRole, SupportedLanguage } from '../../types';
+import { getDictionary } from '../../i18n/dictionaries';
 
 interface SidebarProps {
   currentPage: PageId;
@@ -20,6 +21,7 @@ interface SidebarProps {
   onOpenSos: () => void;
   onLogout?: () => void;
   userRole?: UserRole;
+  language?: SupportedLanguage;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -28,17 +30,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSos,
   onLogout,
   userRole = 'companion',
+  language = 'English',
 }) => {
   const isCompanion = userRole === 'companion';
+  const dict = getDictionary(language);
 
   const allNavItems: { id: PageId; label: string; icon: React.ElementType; companionOnly?: boolean }[] = [
-    { id: 'home', label: 'Overview', icon: Home },
-    { id: 'activities', label: 'Activities', icon: Gamepad2, companionOnly: true },
-    { id: 'reminders', label: 'Reminders', icon: Clock },
-    { id: 'appointments', label: 'Appointments', icon: Calendar },
-    { id: 'family', label: isCompanion ? 'Memory Book' : 'Family Dashboard', icon: isCompanion ? Heart : Users },
-    { id: 'insights', label: isCompanion ? 'My Insights' : 'Care Insights', icon: TrendingUp },
-    { id: 'settings', label: 'Settings', icon: SettingsGear },
+    { id: 'home', label: dict.home, icon: Home },
+    { id: 'activities', label: dict.activities, icon: Gamepad2, companionOnly: true },
+    { id: 'reminders', label: dict.reminders, icon: Clock },
+    { id: 'appointments', label: dict.appointments, icon: Calendar },
+    { id: 'family', label: isCompanion ? dict.family : dict.familyCaregiver, icon: isCompanion ? Heart : Users },
+    { id: 'insights', label: isCompanion ? dict.insights : dict.insightsCaregiver, icon: TrendingUp },
+    { id: 'settings', label: dict.settings, icon: SettingsGear },
   ];
 
   const navItems = allNavItems.filter((item) => !item.companionOnly || isCompanion);
@@ -88,23 +92,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <span className="w-2 h-2 rounded-full bg-[#BD5B3B] animate-ping" />
           <Phone className="w-3.5 h-3.5" />
-          Emergency SOS
+          {dict.sos}
         </button>
 
         <div className="flex items-center justify-between text-xs text-[#9FB4AC] px-3 py-2 bg-white/5 rounded-xl mb-3">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#6FCF97] shrink-0" />
-            <span>Synced</span>
+            <span>{dict.synced}</span>
           </div>
           {onLogout && (
             <button
               type="button"
               onClick={onLogout}
               className="text-[#C9D6D0] hover:text-[#E2A33D] flex items-center gap-1.5 cursor-pointer text-[11px] font-baloo font-bold transition-colors"
-              title="Logout"
+              title={dict.logout}
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Logout</span>
+              <span>{dict.logout}</span>
             </button>
           )}
         </div>

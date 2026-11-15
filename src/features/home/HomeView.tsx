@@ -13,7 +13,8 @@ import {
   Check,
   Leaf,
 } from 'lucide-react';
-import { ReminderItem } from '../../types';
+import { ReminderItem, SupportedLanguage } from '../../types';
+import { getDictionary } from '../../i18n/dictionaries';
 
 interface HomeViewProps {
   reminders: ReminderItem[];
@@ -24,6 +25,7 @@ interface HomeViewProps {
   showToast: (msg: string, icon?: string) => void;
   elderId?: string;
   elderName?: string;
+  language?: SupportedLanguage;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -35,7 +37,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   showToast,
   elderId = 'SHY-9021',
   elderName = 'Bimala aita',
+  language = 'English',
 }) => {
+  const dict = getDictionary(language);
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'pill':
@@ -241,7 +245,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="w-10 h-10 rounded-xl bg-[#F8E6C1] text-[#8A5D18] flex items-center justify-center mb-3">
             <Layers className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">Play a game</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.activities}</h4>
           <p className="text-[11px] text-[#665F51]">Today: Memory Match</p>
         </div>
 
@@ -252,7 +256,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="w-10 h-10 rounded-xl bg-[#E5E9F1] text-[#3E4F74] flex items-center justify-center mb-3">
             <Mic className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">Talk to Sahay</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.talkToSahay}</h4>
           <p className="text-[11px] text-[#665F51]">Voice-guided help</p>
         </div>
 
@@ -263,7 +267,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="w-10 h-10 rounded-xl bg-[#E4ECE7] text-[#22403A] flex items-center justify-center mb-3">
             <BarChart3 className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">My insights</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.insights}</h4>
           <p className="text-[11px] text-[#665F51]">Daily care &amp; routine</p>
         </div>
 
@@ -274,7 +278,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="w-10 h-10 rounded-xl bg-[#F5E1D6] text-[#BD5B3B] flex items-center justify-center mb-3">
             <Phone className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">Call family</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.callFamily}</h4>
           <p className="text-[11px] text-[#665F51]">Ranjit (son) — one tap</p>
         </div>
       </div>

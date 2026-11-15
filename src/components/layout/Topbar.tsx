@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Flame, Phone, Bell, Globe, X, Heart, Users, Sparkles, Lock, LogOut } from 'lucide-react';
 import { SupportedLanguage, UserRole, PortalMode } from '../../types';
+import { getDictionary } from '../../i18n/dictionaries';
 
 interface TopbarProps {
   language: SupportedLanguage;
@@ -32,23 +33,17 @@ export const Topbar: React.FC<TopbarProps> = ({
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const isAssamese = language === 'Assamese';
+  const d = getDictionary(language);
   const isCaregiver = userRole === 'caregiver';
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-4 px-5 sm:px-8 py-4 bg-white border-b border-[#E6DAB9]">
       <div className="min-w-0">
         <h1 className="font-fraunces font-medium text-lg sm:text-xl text-[#221F1B] truncate">
-          {isCaregiver
-            ? 'Caregiver Oversight'
-            : isAssamese
-            ? 'নমস্কাৰ, বিমলা আইতা'
-            : 'Namaskar, Bimala aita'}
+          {isCaregiver ? d.caregiverTitle : d.greeting}
         </h1>
         <p className="text-xs text-[#665F51] font-semibold hidden sm:block">
-          {isCaregiver
-            ? 'Real-time elder connection, activity alerts, and safety perimeter'
-            : 'Tuesday, 30 August · Let’s begin today’s activities'}
+          {isCaregiver ? d.caregiverSub : d.subGreeting}
         </p>
       </div>
 
@@ -94,7 +89,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         {!isCaregiver && (
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8E6C1] text-[#8A5D18] font-baloo font-bold text-xs">
             <Flame className="w-3.5 h-3.5" />
-            6-day streak
+            {d.streak}
           </div>
         )}
 
@@ -158,7 +153,19 @@ export const Topbar: React.FC<TopbarProps> = ({
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E6DAB9] bg-white text-[#221F1B] font-baloo font-bold text-xs hover:border-[#22403A] cursor-pointer"
         >
           <Globe className="w-3.5 h-3.5" />
-          <span>{isAssamese ? 'অ' : 'EN'}</span>
+          <span>
+            {language === 'Assamese'
+              ? 'অ'
+              : language === 'Bodo'
+              ? 'ब'
+              : language === 'Manipuri'
+              ? 'মৈ'
+              : language === 'Khasi'
+              ? 'Kh'
+              : language === 'Mizo'
+              ? 'Mz'
+              : 'EN'}
+          </span>
         </button>
 
         {/* Profile Avatar */}
