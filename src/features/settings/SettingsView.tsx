@@ -1,7 +1,8 @@
-import React from 'react';
-import { Sliders, Type, Globe, Bell, LogOut, RotateCcw, Shield } from 'lucide-react';
-import { SupportedLanguage, TextScale, UserRole, PortalMode } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Sliders, Type, Globe, Bell, LogOut, RotateCcw, Shield, Volume2, Play, Sparkles } from 'lucide-react';
+import { SupportedLanguage, TextScale, UserRole, PortalMode, SpeechRate, VoicePreference } from '../../types';
 import { sandboxStorage } from '../../services/sandboxStorage';
+import { voiceSettings } from '../../services/voiceSettings';
 
 interface SettingsViewProps {
   fontSize: TextScale;
@@ -36,6 +37,70 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { name: 'Manipuri', label: 'Manipuri' },
     { name: 'Mizo', label: 'Mizo' },
   ];
+
+  const [voicePref, setVoicePref] = useState<VoicePreference>(() => voiceSettings.getPreference());
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
+
+  useEffect(() => {
+    const updateVoices = () => {
+      const voices = voiceSettings.getIndianAndRegionalVoices();
+      setAvailableVoices(voices);
+    };
+
+    updateVoices();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
+
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
+  const handleRateChange = (rate: SpeechRate) => {
+    const updated = voiceSettings.savePreference({ rate });
+    setVoicePref(updated);
+    showToast(`Speaking rate set to ${rate}x`, 'check');
+  };
+
+  const handlePitchChange = (pitch: number) => {
+    const updated = voiceSettings.savePreference({ pitch });
+    setVoicePref(updated);
+  };
+
+  const handleVoiceChange = (voiceUri: string) => {
+    const chosenVoice = availableVoices.find((v) => v.voiceURI === voiceUri);
+    const updated = voiceSettings.savePreference({
+      voiceUri: voiceUri || undefined,
+      voiceName: chosenVoice?.name || undefined,
+    });
+    setVoicePref(updated);
+    showToast(chosenVoice ? `Voice set to ${chosenVoice.name}` : 'Default voice selected', 'check');
+  };
+
+  const handlePreviewVoice = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      showToast('Speech synthesis not available in this browser', 'alert');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const phrase =
+      language === 'Assamese'
+        ? 'নমস্কাৰ! মই সহায়, আপোনাৰ লগত আছোঁ।'
+        : 'Namaskar! I am Sahay, your gentle daily companion.';
+    const utterance = new SpeechSynthesisUtterance(phrase);
+    voiceSettings.applyPreferenceToUtterance(utterance, voicePref);
+
+    setIsPreviewingVoice(true);
+    utterance.onend = () => setIsPreviewingVoice(false);
+    utterance.onerror = () => setIsPreviewingVoice(false);
+    window.speechSynthesis.speak(utterance);
+    showToast('Playing voice sample…', 'play');
+  };
 
   return (
     <div className="animate-rise max-w-[1180px]">
@@ -108,6 +173,112 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {lang.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Speech Synthesis Speed, Pitch & Accent Preferences (Issue #6) */}
+          <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-baloo font-bold text-sm text-[#22403A] flex items-center gap-2">
+                <Volume2 className="w-4 h-4" />
+                Assistant Voice &amp; Speech Customization
+              </h3>
+              <span className="text-[10px] font-baloo font-bold text-[#3F7455] bg-[#E4ECE7] px-2 py-0.5 rounded-full">
+                Personalized
+              </span>
+            </div>
+
+            {/* Speaking Rate (0.75x Slow, 0.9x Gentle, 1.0x Standard) */}
+            <div>
+              <label className="block text-xs font-baloo font-bold text-[#665F51] mb-2">
+                Speaking Pace (Rate)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { rate: 0.75 as SpeechRate, label: '0.75x', desc: 'Slow' },
+                  { rate: 0.9 as SpeechRate, label: '0.9x', desc: 'Gentle (Default)' },
+                  { rate: 1.0 as SpeechRate, label: '1.0x', desc: 'Standard' },
+                ].map((item) => (
+                  <button
+                    key={item.rate}
+                    type="button"
+                    onClick={() => handleRateChange(item.rate)}
+                    className={`p-2.5 rounded-xl border font-baloo font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      voicePref.rate === item.rate
+                        ? 'bg-[#22403A] text-[#FBF7EE] border-[#22403A] shadow-xs'
+                        : 'bg-white text-[#221F1B] border-[#E6DAB9] hover:border-[#22403A]'
+                    }`}
+                  >
+                    <span className="text-sm">{item.label}</span>
+                    <span className="text-[10px] opacity-75 mt-0.5">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Voice Pitch */}
+            <div>
+              <label className="block text-xs font-baloo font-bold text-[#665F51] mb-2">
+                Tone &amp; Pitch Warmth
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { pitch: 0.95, label: 'Deep', desc: 'Calm & grounding' },
+                  { pitch: 1.05, label: 'Warm', desc: 'Gentle & soothing' },
+                  { pitch: 1.15, label: 'Bright', desc: 'Cheerful & clear' },
+                ].map((item) => (
+                  <button
+                    key={item.pitch}
+                    type="button"
+                    onClick={() => handlePitchChange(item.pitch)}
+                    className={`p-2 rounded-xl border font-baloo font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      Math.abs(voicePref.pitch - item.pitch) < 0.04
+                        ? 'bg-[#E4ECE7] text-[#22403A] border-[#22403A]'
+                        : 'bg-white text-[#665F51] border-[#E6DAB9] hover:border-[#22403A]'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    <span className="text-[10px] opacity-75">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Voice Selection (Filtered to Indian English / Regional voices) */}
+            <div>
+              <label className="block text-xs font-baloo font-bold text-[#665F51] mb-1.5">
+                Voice Accent (Indian English &amp; Regional)
+              </label>
+              <select
+                value={voicePref.voiceUri || ''}
+                onChange={(e) => handleVoiceChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-[#E6DAB9] bg-white text-xs font-medium focus:outline-2 focus:outline-[#22403A]"
+              >
+                <option value="">Default System Natural Voice</option>
+                {availableVoices.map((voice) => (
+                  <option key={voice.voiceURI} value={voice.voiceURI}>
+                    {voice.name} ({voice.lang})
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-[#948C7A] mt-1 block">
+                {availableVoices.length > 0
+                  ? `${availableVoices.length} Indian / regional voice models detected on device`
+                  : 'System speech synthesis voices will load automatically'}
+              </span>
+            </div>
+
+            {/* Preview Voice Button */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={handlePreviewVoice}
+                disabled={isPreviewingVoice}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-[#FBF7EE] border border-[#E6DAB9] hover:border-[#22403A] hover:bg-[#F1E7CE] text-[#22403A] font-baloo font-bold text-xs transition-colors cursor-pointer"
+              >
+                <Volume2 className={`w-3.5 h-3.5 ${isPreviewingVoice ? 'animate-bounce text-[#BD5B3B]' : ''}`} />
+                <span>{isPreviewingVoice ? 'Speaking Sample…' : 'Preview Voice Sample'}</span>
+              </button>
             </div>
           </div>
         </div>

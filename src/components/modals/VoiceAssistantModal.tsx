@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mic, X, Send, Sparkles, Volume2, ArrowRight } from 'lucide-react';
 import { api } from '../../services/api';
 import { SupportedLanguage } from '../../types';
+import { voiceSettings } from '../../services/voiceSettings';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -38,8 +39,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.pitch = 1.05;
+        voiceSettings.applyPreferenceToUtterance(utterance);
         setIsSpeaking(true);
         utterance.onend = () => setIsSpeaking(false);
         utterance.onerror = () => setIsSpeaking(false);

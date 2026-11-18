@@ -95,6 +95,15 @@ export type SupportedLanguage =
 
 export type TextScale = 'normal' | 'large' | 'xlarge';
 
+export type SpeechRate = 0.75 | 0.9 | 1.0;
+
+export interface VoicePreference {
+  rate: SpeechRate; // 0.75x Slow, 0.9x Gentle, 1.0x Standard
+  pitch: number;
+  voiceUri?: string;
+  voiceName?: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;

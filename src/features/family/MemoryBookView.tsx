@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { FamilyMemberItem } from '../../types';
+import { voiceSettings } from '../../services/voiceSettings';
 
 interface MemoryBookViewProps {
   familyMembers: FamilyMemberItem[];
@@ -81,8 +82,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(message);
-        utterance.rate = 0.9;
-        utterance.pitch = 1.05;
+        voiceSettings.applyPreferenceToUtterance(utterance);
         utterance.onend = () => setPlayingId(null);
         utterance.onerror = () => setPlayingId(null);
         window.speechSynthesis.speak(utterance);
