@@ -17,6 +17,7 @@ import { FamilyMemberItem, ZoneEventItem, UserRole } from '../../types';
 import { ElderSwitcher } from './ElderSwitcher';
 import { MemoryBookView } from './MemoryBookView';
 import { LinkedElder, sandboxStorage } from '../../services/sandboxStorage';
+import { InteractiveGeofenceMap } from './InteractiveGeofenceMap';
 
 interface FamilyViewProps {
   familyMembers: FamilyMemberItem[];
@@ -212,27 +213,11 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
           <div className="lg:col-span-2 space-y-5">
             <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
               <h3 className="font-baloo font-bold text-sm text-[#22403A] mb-3">Live Geofence Map</h3>
-              <div className="rounded-xl overflow-hidden bg-[#E4ECE7] border border-[#E6DAB9]">
-                <svg viewBox="0 0 300 200" className="w-full h-52 block">
-                  <rect width="300" height="200" fill="#E4ECE7" />
-                  <path d="M0 40 H300 M0 90 H300 M0 140 H300" stroke="#FBF7EE" strokeWidth="2" opacity="0.6" />
-                  <path d="M40 0 V200 M100 0 V200 M160 0 V200 M220 0 V200" stroke="#FBF7EE" strokeWidth="2" opacity="0.6" />
-                  {/* Safe zone boundary */}
-                  <circle cx="150" cy="100" r={svgRadius} fill="rgba(63,116,85,0.12)" stroke="#3F7455" strokeWidth="2" strokeDasharray="6 4" />
-                  {/* Home anchor */}
-                  <circle cx="150" cy="100" r={6} fill="#22403A" stroke="white" strokeWidth="2" />
-                  <text x="150" y="120" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#22403A" fontFamily="Baloo 2">
-                    HOME
-                  </text>
-                  {/* Elder pin */}
-                  <line x1="150" y1="100" x2="190" y2="75" stroke="#BD5B3B" strokeWidth="2" strokeDasharray="4 4" />
-                  <circle cx="190" cy="75" r={6} fill="#BD5B3B" stroke="white" strokeWidth="2" />
-                  <circle cx="190" cy="75" r={11} fill="none" stroke="#BD5B3B" strokeWidth="1.5" opacity="0.6">
-                    <animate attributeName="r" values="8;16;8" dur="2s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite" />
-                  </circle>
-                </svg>
-              </div>
+              <InteractiveGeofenceMap
+                safeZoneRadius={safeZoneRadius}
+                elderName={currentElder?.name}
+                onUpdateRadius={onUpdateRadius}
+              />
 
               <div className="flex items-center gap-3 mt-4 p-3 bg-[#F1E7CE] rounded-xl">
                 <label className="text-xs font-baloo font-bold text-[#665F51] shrink-0">
