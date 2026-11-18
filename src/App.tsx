@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PageId, ActivityId, SupportedLanguage, TextScale, ReminderItem, AppointmentItem, FamilyMemberItem, ZoneEventItem, UserRole, PortalMode } from './types';
 import { api } from './services/api';
+import { SUPPORTED_LANGUAGES_LIST, getDictionary } from './i18n/dictionaries';
 import { Sidebar } from './components/layout/Sidebar';
 import { Topbar } from './components/layout/Topbar';
 import { MobileNav } from './components/layout/MobileNav';
@@ -109,12 +110,15 @@ export default function App() {
   };
 
   const handleToggleLanguage = () => {
-    const nextLang = language === 'English' ? 'Assamese' : 'English';
+    const currentIndex = SUPPORTED_LANGUAGES_LIST.findIndex((l) => l.code === language);
+    const nextLang = SUPPORTED_LANGUAGES_LIST[(currentIndex + 1) % SUPPORTED_LANGUAGES_LIST.length].code;
     setLanguage(nextLang);
-    showToast(
-      nextLang === 'Assamese' ? 'ভাষা অসমীয়ালৈ সলনি কৰা হ’ল' : 'Language switched to English',
-      'globe'
-    );
+    showToast(getDictionary(nextLang).languageSwitchedToast, 'globe');
+  };
+
+  const handleSelectLanguage = (nextLang: SupportedLanguage) => {
+    setLanguage(nextLang);
+    showToast(getDictionary(nextLang).languageSwitchedToast, 'globe');
   };
 
   const handleToggleReminder = async (id: string) => {
@@ -194,6 +198,7 @@ export default function App() {
         onOpenSos={() => setIsSosModalOpen(true)}
         onLogout={handleLogout}
         userRole={userRole}
+        language={language}
       />
 
       {/* Main Content Area */}
@@ -208,12 +213,14 @@ export default function App() {
           onOpenSos={() => setIsSosModalOpen(true)}
           onLogout={handleLogout}
           userRole={userRole}
+          language={language}
         />
 
         {/* Topbar */}
         <Topbar
           language={language}
           onToggleLanguage={handleToggleLanguage}
+          onSelectLanguage={handleSelectLanguage}
           onOpenSos={() => setIsSosModalOpen(true)}
           userRole={userRole}
           portalMode={portalMode}
@@ -233,6 +240,7 @@ export default function App() {
               showToast={showToast}
               elderId="SHY-9021"
               elderName="Bimala aita"
+              language={language}
             />
           )}
 
@@ -296,10 +304,7 @@ export default function App() {
               fontSize={fontSize}
               onChangeFontSize={(scale) => setFontSize(scale)}
               language={language}
-              onChangeLanguage={(lang) => {
-                setLanguage(lang);
-                showToast(`App language set to ${lang}`, 'globe');
-              }}
+              onChangeLanguage={handleSelectLanguage}
               showToast={showToast}
               userRole={userRole}
               onSwitchRole={handleSwitchRole}

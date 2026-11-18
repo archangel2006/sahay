@@ -2,6 +2,7 @@ import React from 'react';
 import { Sliders, Type, Globe, Bell, LogOut, RotateCcw, Shield } from 'lucide-react';
 import { SupportedLanguage, TextScale, UserRole, PortalMode } from '../../types';
 import { sandboxStorage } from '../../services/sandboxStorage';
+import { SUPPORTED_LANGUAGES_LIST, getDictionary } from '../../i18n/dictionaries';
 
 interface SettingsViewProps {
   fontSize: TextScale;
@@ -28,14 +29,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onResetApp,
   onLogout,
 }) => {
-  const languages: { name: SupportedLanguage; label: string }[] = [
-    { name: 'English', label: 'English' },
-    { name: 'Assamese', label: 'অসমীয়া' },
-    { name: 'Bodo', label: 'Bodo' },
-    { name: 'Khasi', label: 'Khasi' },
-    { name: 'Manipuri', label: 'Manipuri' },
-    { name: 'Mizo', label: 'Mizo' },
-  ];
+  const dict = getDictionary(language);
 
   return (
     <div className="animate-rise max-w-[1180px]">
@@ -54,7 +48,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
             <h3 className="font-baloo font-bold text-sm text-[#22403A] mb-3 flex items-center gap-2">
               <Type className="w-4 h-4" />
-              Text Size
+              {dict.fontSize}
             </h3>
             <div className="flex gap-3">
               {[
@@ -92,22 +86,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
             <h3 className="font-baloo font-bold text-sm text-[#22403A] mb-3 flex items-center gap-2">
               <Globe className="w-4 h-4" />
-              App &amp; Voice Language
+              {dict.appAndVoiceLanguage}
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {languages.map((lang) => (
-                <button
-                  key={lang.name}
-                  onClick={() => onChangeLanguage(lang.name)}
-                  className={`p-3 rounded-xl border font-baloo font-bold text-xs cursor-pointer transition-all ${
-                    language === lang.name
-                      ? 'bg-[#E4ECE7] border-[#22403A] text-[#22403A]'
-                      : 'bg-white border-[#E6DAB9] text-[#221F1B] hover:border-[#22403A]'
-                  }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
+              {SUPPORTED_LANGUAGES_LIST.map((lang) => {
+                const isSelected = language === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => onChangeLanguage(lang.code)}
+                    className={`p-3 rounded-xl border font-baloo font-bold text-xs cursor-pointer transition-all flex items-center gap-2.5 ${
+                      isSelected
+                        ? 'bg-[#E4ECE7] border-[#22403A] text-[#22403A] shadow-xs'
+                        : 'bg-white border-[#E6DAB9] text-[#221F1B] hover:border-[#22403A]'
+                    }`}
+                  >
+                    <span
+                      className={`w-6 h-6 rounded-lg text-[11px] font-extrabold flex items-center justify-center ${
+                        isSelected
+                          ? 'bg-[#22403A] text-white'
+                          : 'bg-[#F1E7CE] text-[#22403A]'
+                      }`}
+                    >
+                      {lang.badge}
+                    </span>
+                    <span className="truncate">{lang.nativeName}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

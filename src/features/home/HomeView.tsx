@@ -13,7 +13,8 @@ import {
   Check,
   Leaf,
 } from 'lucide-react';
-import { ReminderItem } from '../../types';
+import { ReminderItem, SupportedLanguage } from '../../types';
+import { getDictionary } from '../../i18n/dictionaries';
 
 interface HomeViewProps {
   reminders: ReminderItem[];
@@ -24,6 +25,7 @@ interface HomeViewProps {
   showToast: (msg: string, icon?: string) => void;
   elderId?: string;
   elderName?: string;
+  language?: SupportedLanguage;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -35,7 +37,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   showToast,
   elderId = 'SHY-9021',
   elderName = 'Bimala aita',
+  language = 'English',
 }) => {
+  const dict = getDictionary(language as SupportedLanguage);
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'pill':
@@ -70,7 +74,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 font-baloo font-bold text-xs text-[#E2A33D] uppercase tracking-wider">
               <Sun className="w-4 h-4" />
-              Today’s Focus
+              {dict.todaysFocus}
             </div>
             <div className="px-2.5 py-0.5 rounded-full bg-white/15 text-[#FBF7EE] text-[11px] font-baloo font-bold tracking-wide">
               Companion ID: {elderId}
@@ -87,14 +91,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
               onClick={() => onStartGame('memory')}
               className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#E2A33D] text-[#152B26] font-baloo font-bold text-sm hover:brightness-95 transition-all cursor-pointer shadow-sm"
             >
-              Start today’s activity
+              {dict.startTodayActivity}
               <ChevronRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => onNavigate('family')}
               className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 text-[#FBF7EE] border border-white/30 font-baloo font-bold text-sm hover:bg-white/20 transition-all cursor-pointer"
             >
-              View progress
+              {dict.viewProgress}
             </button>
           </div>
         </div>
@@ -118,17 +122,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
         <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#665F51]">Weekly streak</span>
+            <span className="text-xs font-bold text-[#665F51]">{dict.weeklyStreak}</span>
             <div className="w-9 h-9 rounded-xl bg-[#F8E6C1] text-[#8A5D18] flex items-center justify-center">
               <Flame className="w-4 h-4" />
             </div>
           </div>
-          <div className="font-fraunces text-2xl font-normal text-[#221F1B]">6 days</div>
+          <div className="font-fraunces text-2xl font-normal text-[#221F1B]">{dict.streakDays(6)}</div>
         </div>
 
         <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#665F51]">Avg. accuracy</span>
+            <span className="text-xs font-bold text-[#665F51]">{dict.avgAccuracy}</span>
             <div className="w-9 h-9 rounded-xl bg-[#E4ECE7] text-[#22403A] flex items-center justify-center">
               <Activity className="w-4 h-4" />
             </div>
@@ -138,7 +142,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#665F51]">Next reminder</span>
+            <span className="text-xs font-bold text-[#665F51]">{dict.nextReminder}</span>
             <div className="w-9 h-9 rounded-xl bg-[#F5E1D6] text-[#BD5B3B] flex items-center justify-center">
               <Pill className="w-4 h-4" />
             </div>
@@ -153,13 +157,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-[#E6DAB9]/60 mb-2">
             <h3 className="font-baloo font-bold text-sm text-[#22403A]">
-              Today’s Care Plan
+              {dict.todaysCarePlan}
             </h3>
             <button
               onClick={() => onNavigate('reminders')}
               className="px-3 py-1 rounded-full border border-[#E6DAB9] font-baloo font-bold text-xs text-[#221F1B] hover:border-[#22403A] cursor-pointer"
             >
-              View all
+              {dict.viewAll}
             </button>
           </div>
 
@@ -185,6 +189,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
                 <button
                   onClick={() => onToggleReminder(r.id)}
+                  aria-label={`${dict.takeMedicine}: ${r.txt}`}
                   className={`w-7 h-7 rounded-full border-2 border-[#3F7455] flex items-center justify-center cursor-pointer transition-all ${
                     r.done ? 'bg-[#3F7455] text-white' : 'bg-transparent text-transparent hover:bg-[#E4ECE7]'
                   }`}
@@ -200,7 +205,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div className="pb-3 border-b border-[#E6DAB9]/60 mb-3">
             <h3 className="font-baloo font-bold text-sm text-[#22403A]">
-              Continue Engagement
+              {dict.continueEngagement}
             </h3>
           </div>
 
@@ -231,7 +236,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Quick Actions */}
       <h2 className="font-fraunces text-xl font-medium text-[#221F1B] mb-4">
-        Quick Actions
+        {dict.quickActions}
       </h2>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div
@@ -241,7 +246,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="w-10 h-10 rounded-xl bg-[#F8E6C1] text-[#8A5D18] flex items-center justify-center mb-3">
             <Layers className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">Play a game</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.playGame}</h4>
           <p className="text-[11px] text-[#665F51]">Today: Memory Match</p>
         </div>
 
@@ -252,7 +257,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="w-10 h-10 rounded-xl bg-[#E5E9F1] text-[#3E4F74] flex items-center justify-center mb-3">
             <Mic className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">Talk to Sahay</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.talkToSahay}</h4>
           <p className="text-[11px] text-[#665F51]">Voice-guided help</p>
         </div>
 
@@ -263,18 +268,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="w-10 h-10 rounded-xl bg-[#E4ECE7] text-[#22403A] flex items-center justify-center mb-3">
             <BarChart3 className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">My insights</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.insights}</h4>
           <p className="text-[11px] text-[#665F51]">Daily care &amp; routine</p>
         </div>
 
         <div
-          onClick={() => showToast('Calling Ranjit (son) with direct one-tap link…', 'phone')}
+          onClick={() => showToast(`Calling Ranjit (son) with direct one-tap link…`, 'phone')}
           className="bg-white border border-[#E6DAB9] rounded-2xl p-4 cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all"
         >
           <div className="w-10 h-10 rounded-xl bg-[#F5E1D6] text-[#BD5B3B] flex items-center justify-center mb-3">
             <Phone className="w-5 h-5" />
           </div>
-          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">Call family</h4>
+          <h4 className="font-baloo font-bold text-sm text-[#221F1B] mb-0.5">{dict.callFamily}</h4>
           <p className="text-[11px] text-[#665F51]">Ranjit (son) — one tap</p>
         </div>
       </div>

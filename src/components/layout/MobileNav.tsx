@@ -15,7 +15,8 @@ import {
   MoreHorizontal,
   LogOut,
 } from 'lucide-react';
-import { PageId, UserRole } from '../../types';
+import { PageId, UserRole, SupportedLanguage } from '../../types';
+import { getDictionary } from '../../i18n/dictionaries';
 
 interface MobileNavProps {
   currentPage: PageId;
@@ -26,6 +27,7 @@ interface MobileNavProps {
   onOpenSos: () => void;
   onLogout?: () => void;
   userRole?: UserRole;
+  language?: SupportedLanguage;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
@@ -37,17 +39,19 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onOpenSos,
   onLogout,
   userRole = 'companion',
+  language = 'English',
 }) => {
   const isCompanion = userRole === 'companion';
+  const dict = getDictionary(language as SupportedLanguage);
 
   const allNavItems: { id: PageId; label: string; icon: React.ElementType; companionOnly?: boolean }[] = [
-    { id: 'home', label: 'Overview', icon: Home },
-    { id: 'activities', label: 'Activities', icon: Gamepad2, companionOnly: true },
-    { id: 'reminders', label: 'Reminders', icon: Clock },
-    { id: 'appointments', label: 'Appointments', icon: Calendar },
-    { id: 'family', label: isCompanion ? 'Memory Book' : 'Family Dashboard', icon: isCompanion ? Heart : Users },
-    { id: 'insights', label: isCompanion ? 'My Insights' : 'Care Insights', icon: TrendingUp },
-    { id: 'settings', label: 'Settings', icon: SettingsGear },
+    { id: 'home', label: dict.home, icon: Home },
+    { id: 'activities', label: dict.activities, icon: Gamepad2, companionOnly: true },
+    { id: 'reminders', label: dict.reminders, icon: Clock },
+    { id: 'appointments', label: dict.appointments, icon: Calendar },
+    { id: 'family', label: isCompanion ? dict.family : 'Family Dashboard', icon: isCompanion ? Heart : Users },
+    { id: 'insights', label: isCompanion ? dict.insights : 'Care Insights', icon: TrendingUp },
+    { id: 'settings', label: dict.settings, icon: SettingsGear },
   ];
 
   const navItems = allNavItems.filter((item) => !item.companionOnly || isCompanion);
@@ -142,7 +146,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             className="w-full py-2.5 px-3 rounded-full bg-[#BD5B3B]/20 text-[#F0AF97] border border-[#BD5B3B]/40 font-baloo font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
           >
             <Phone className="w-3.5 h-3.5" />
-            Emergency SOS
+            {dict.emergencyHelp}
           </button>
         </div>
       </div>
@@ -150,12 +154,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E6DAB9] px-2 py-2 flex items-center justify-around z-30 shadow-lg">
         {[
-          { id: 'home', label: 'Home', icon: Home },
+          { id: 'home', label: dict.home, icon: Home },
           ...(isCompanion
-            ? [{ id: 'activities', label: 'Activities', icon: Gamepad2 }]
-            : [{ id: 'insights', label: 'Insights', icon: TrendingUp }]),
-          { id: 'reminders', label: 'Reminders', icon: Clock },
-          { id: 'family', label: isCompanion ? 'Memory Book' : 'Family', icon: isCompanion ? Heart : Users },
+            ? [{ id: 'activities', label: dict.activities, icon: Gamepad2 }]
+            : [{ id: 'insights', label: dict.insights, icon: TrendingUp }]),
+          { id: 'reminders', label: dict.reminders, icon: Clock },
+          { id: 'family', label: isCompanion ? dict.family : 'Family', icon: isCompanion ? Heart : Users },
         ].map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
