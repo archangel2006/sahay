@@ -17,6 +17,7 @@ import { FamilyMemberItem, ZoneEventItem, UserRole } from '../../types';
 import { ElderSwitcher } from './ElderSwitcher';
 import { MemoryBookView } from './MemoryBookView';
 import { LinkedElder, sandboxStorage } from '../../services/sandboxStorage';
+import { api } from '../../services/api';
 
 interface FamilyViewProps {
   familyMembers: FamilyMemberItem[];
@@ -28,6 +29,17 @@ interface FamilyViewProps {
   showToast: (msg: string, icon?: string) => void;
   userRole?: UserRole;
   onNavigateToInsights?: () => void;
+  linkedElders?: LinkedElder[];
+  currentElderId?: string;
+  onSelectElder?: (id: string) => void;
+  onLinkNewElder?: (
+    id: string,
+    name: string,
+    location: string,
+    relationTag: string,
+    pin: string
+  ) => Promise<void> | void;
+  onUnlinkElder?: (id: string) => Promise<void> | void;
 }
 
 export const FamilyView: React.FC<FamilyViewProps> = ({
@@ -40,26 +52,52 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   showToast,
   userRole = 'companion',
   onNavigateToInsights,
+  linkedElders: propLinkedElders,
+  currentElderId: propCurrentElderId,
+  onSelectElder,
+  onLinkNewElder: propLinkNewElder,
+  onUnlinkElder: propUnlinkElder,
 }) => {
   const isCompanion = userRole === 'companion';
 
-  // Linked elders state (for caregiver oversight)
-  const [linkedElders, setLinkedElders] = useState<LinkedElder[]>(() => sandboxStorage.getLinkedElders());
-  const [currentElderId, setCurrentElderId] = useState<string>('SHY-9021');
+  // Linked elders state fallback
+  const [localLinkedElders, setLocalLinkedElders] = useState<LinkedElder[]>(() => sandboxStorage.getLinkedElders());
+  const [localCurrentElderId, setLocalCurrentElderId] = useState<string>('SHY-9021');
+
+  const linkedElders = propLinkedElders || localLinkedElders;
+  const currentElderId = propCurrentElderId || localCurrentElderId;
+  const setCurrentElderId = onSelectElder || setLocalCurrentElderId;
+
   const currentElder = linkedElders.find((e) => e.id === currentElderId) || linkedElders[0];
 
-  const handleLinkNewElder = (id: string, name: string, location: string, relationTag: string) => {
-    const newElder: LinkedElder = {
-      id,
-      name,
-      location,
-      relationTag,
-      avatarColor: '#3E4F74',
-    };
-    const updated = [...linkedElders, newElder];
-    setLinkedElders(updated);
-    sandboxStorage.saveLinkedElders(updated);
-    setCurrentElderId(id);
+  const handleLinkNewElder = async (
+    id: string,
+    name: string,
+    location: string,
+    relationTag: string,
+    pin: string
+  ) => {
+    if (propLinkNewElder) {
+      await propLinkNewElder(id, name, location, relationTag, pin);
+      return;
+    }
+    const created = await api.linkElder(id, name, location, relationTag, pin);
+    const updated = [...localLinkedElders, created];
+    setLocalLinkedElders(updated);
+    setLocalCurrentElderId(id);
+  };
+
+  const handleUnlinkElder = async (id: string) => {
+    if (propUnlinkElder) {
+      await propUnlinkElder(id);
+      return;
+    }
+    await api.unlinkElder(id);
+    const updated = localLinkedElders.filter((e) => e.id !== id);
+    setLocalLinkedElders(updated);
+    if (localCurrentElderId === id && updated.length > 0) {
+      setLocalCurrentElderId(updated[0].id);
+    }
   };
 
   // If elder companion is using the tablet, show their personal, distraction-free Memory Book
@@ -114,6 +152,7 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
         currentElderId={currentElderId}
         onSelectElder={setCurrentElderId}
         onLinkNewElder={handleLinkNewElder}
+        onUnlinkElder={handleUnlinkElder}
         showToast={showToast}
       />
 

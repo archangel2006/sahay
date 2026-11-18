@@ -11,7 +11,7 @@ import {
   FamilyMemberItem,
   ZoneEventItem,
 } from '../types';
-import { sandboxStorage } from './sandboxStorage';
+import { sandboxStorage, LinkedElder } from './sandboxStorage';
 
 export const api = {
   // Reminders
@@ -202,5 +202,70 @@ export const api = {
     } catch (e) {
       return 'Namaskar! I have verified your routine for today, and family alerts are working smoothly.';
     }
+  },
+
+  // Linked Elders (Issue #9)
+  async getLinkedElders(): Promise<LinkedElder[]> {
+    try {
+      const res = await fetch('/api/elders');
+      if (!res.ok) throw new Error('Network response not ok');
+      return await res.json();
+    } catch (e) {
+      return sandboxStorage.getLinkedElders();
+    }
+  },
+
+  async linkElder(
+    id: string,
+    name: string,
+    location: string,
+    relationTag: string,
+    pin: string
+  ): Promise<LinkedElder> {
+    const palette = ['#22403A', '#BD5B3B', '#3E4F74', '#8A5D18', '#3F7455'];
+    const current = sandboxStorage.getLinkedElders();
+    const cleanId = id.toUpperCase().trim();
+    const existing = current.find((e) => e.id.toUpperCase() === cleanId);
+    if (existing) {
+      throw new Error(`Elder ${cleanId} is already linked to your caregiver account.`);
+    }
+
+    if (!pin || pin.trim().length !== 4 || !/^\d{4}$/.test(pin.trim())) {
+      throw new Error('Please enter a valid 4-digit companion pairing PIN code.');
+    }
+
+    const newElder: LinkedElder = {
+      id: cleanId,
+      name: name.trim(),
+      location: location.trim() || 'Assam',
+      relationTag: relationTag.trim() || 'Family Member',
+      avatarColor: palette[current.length % palette.length],
+      pin: pin.trim(),
+    };
+
+    try {
+      await fetch('/api/elders/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newElder),
+      });
+    } catch (e) {
+      // offline / sandbox fallback
+    }
+
+    const updated = [...current, newElder];
+    sandboxStorage.saveLinkedElders(updated);
+    return newElder;
+  },
+
+  async unlinkElder(id: string): Promise<void> {
+    try {
+      await fetch(`/api/elders/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      // offline fallback
+    }
+    const current = sandboxStorage.getLinkedElders();
+    const updated = current.filter((e) => e.id !== id);
+    sandboxStorage.saveLinkedElders(updated);
   },
 };

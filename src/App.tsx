@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PageId, ActivityId, SupportedLanguage, TextScale, ReminderItem, AppointmentItem, FamilyMemberItem, ZoneEventItem, UserRole, PortalMode } from './types';
 import { api } from './services/api';
+import { LinkedElder, sandboxStorage } from './services/sandboxStorage';
 import { Sidebar } from './components/layout/Sidebar';
 import { Topbar } from './components/layout/Topbar';
 import { MobileNav } from './components/layout/MobileNav';
@@ -36,6 +37,11 @@ export default function App() {
   const [safeZoneRadius, setSafeZoneRadius] = useState<number>(500);
   const [zoneEvents, setZoneEvents] = useState<ZoneEventItem[]>([]);
 
+  // Multi-Elder Profile Switcher state (Companion PIN protected)
+  const [linkedElders, setLinkedElders] = useState<LinkedElder[]>(() => sandboxStorage.getLinkedElders());
+  const [currentElderId, setCurrentElderId] = useState<string>('SHY-9021');
+  const currentElder = linkedElders.find((e) => e.id === currentElderId) || linkedElders[0];
+
   // Accessibility & Preferences
   const [language, setLanguage] = useState<SupportedLanguage>('English');
   const [fontSize, setFontSize] = useState<TextScale>('normal');
@@ -58,17 +64,54 @@ export default function App() {
   };
 
   const loadAppData = async () => {
-    const [remData, apptData, famData, safeData] = await Promise.all([
+    const [remData, apptData, famData, safeData, eldersData] = await Promise.all([
       api.getReminders(),
       api.getAppointments(),
       api.getFamilyMembers(),
       api.getSafetyStatus(),
+      api.getLinkedElders(),
     ]);
     setReminders(remData);
     setAppointments(apptData);
     setFamilyMembers(famData);
     setSafeZoneRadius(safeData.radius);
     setZoneEvents(safeData.events);
+    if (eldersData && eldersData.length > 0) {
+      setLinkedElders(eldersData);
+    }
+  };
+
+  const handleSelectElder = (id: string) => {
+    setCurrentElderId(id);
+    const found = linkedElders.find((e) => e.id === id);
+    if (found) {
+      showToast(`Active profile switched to ${found.name}`, 'check');
+    }
+  };
+
+  const handleLinkNewElder = async (
+    id: string,
+    name: string,
+    location: string,
+    relationTag: string,
+    pin: string
+  ) => {
+    const created = await api.linkElder(id, name, location, relationTag, pin);
+    setLinkedElders((prev) => [...prev, created]);
+    setCurrentElderId(id);
+    showToast(`Successfully linked ${name} (${id})`, 'check');
+  };
+
+  const handleUnlinkElder = async (id: string) => {
+    await api.unlinkElder(id);
+    setLinkedElders((prev) => {
+      const updated = prev.filter((e) => e.id !== id);
+      if (currentElderId === id && updated.length > 0) {
+        setCurrentElderId(updated[0].id);
+      }
+      return updated;
+    });
+    showToast('Elder profile unlinked', 'check');
   };
 
   // Initial load
@@ -219,6 +262,10 @@ export default function App() {
           portalMode={portalMode}
           onSwitchRole={handleSwitchRole}
           onLogout={handleLogout}
+          linkedElders={linkedElders}
+          currentElderId={currentElderId}
+          onSelectElder={handleSelectElder}
+          elderName={currentElder?.name}
         />
 
         {/* Page Views */}
@@ -231,8 +278,8 @@ export default function App() {
               onStartGame={handleStartGame}
               onOpenVoice={() => setIsVoiceModalOpen(true)}
               showToast={showToast}
-              elderId="SHY-9021"
-              elderName="Bimala aita"
+              elderId={currentElder?.id || 'SHY-9021'}
+              elderName={currentElder?.name || 'Bimala aita'}
             />
           )}
 
@@ -277,6 +324,11 @@ export default function App() {
               showToast={showToast}
               userRole={userRole}
               onNavigateToInsights={() => handleNavigate('insights')}
+              linkedElders={linkedElders}
+              currentElderId={currentElderId}
+              onSelectElder={handleSelectElder}
+              onLinkNewElder={handleLinkNewElder}
+              onUnlinkElder={handleUnlinkElder}
             />
           )}
 

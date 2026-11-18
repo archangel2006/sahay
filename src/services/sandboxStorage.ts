@@ -18,11 +18,12 @@ export interface LinkedElder {
   location: string;
   avatarColor: string;
   relationTag: string;
+  pin?: string;
 }
 
 export const DEFAULT_ELDERS: LinkedElder[] = [
-  { id: 'SHY-9021', name: 'Bimala aita', location: 'Jorhat, Assam', avatarColor: '#22403A', relationTag: 'Mother' },
-  { id: 'SHY-4412', name: 'Dimbeswar koka', location: 'Guwahati, Assam', avatarColor: '#BD5B3B', relationTag: 'Father-in-law' },
+  { id: 'SHY-9021', name: 'Bimala aita', location: 'Jorhat, Assam', avatarColor: '#22403A', relationTag: 'Mother', pin: '9021' },
+  { id: 'SHY-4412', name: 'Dimbeswar koka', location: 'Guwahati, Assam', avatarColor: '#BD5B3B', relationTag: 'Father-in-law', pin: '4412' },
 ];
 
 export const DEFAULT_REMINDERS: ReminderItem[] = [

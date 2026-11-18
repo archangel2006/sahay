@@ -1,6 +1,20 @@
-import React, { useState } from 'react';
-import { Flame, Phone, Bell, Globe, X, Heart, Users, Sparkles, Lock, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Flame,
+  Phone,
+  Bell,
+  Globe,
+  X,
+  Heart,
+  Users,
+  Sparkles,
+  Lock,
+  LogOut,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { SupportedLanguage, UserRole, PortalMode } from '../../types';
+import { LinkedElder } from '../../services/sandboxStorage';
 
 interface TopbarProps {
   language: SupportedLanguage;
@@ -10,6 +24,10 @@ interface TopbarProps {
   portalMode?: PortalMode;
   onSwitchRole?: (role: UserRole) => void;
   onLogout?: () => void;
+  linkedElders?: LinkedElder[];
+  currentElderId?: string;
+  onSelectElder?: (elderId: string) => void;
+  elderName?: string;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -20,8 +38,18 @@ export const Topbar: React.FC<TopbarProps> = ({
   portalMode = 'demo',
   onSwitchRole,
   onLogout,
+  linkedElders = [],
+  currentElderId = 'SHY-9021',
+  onSelectElder,
+  elderName = 'Bimala aita',
 }) => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isElderMenuOpen, setIsElderMenuOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const elderMenuRef = useRef<HTMLDivElement>(null);
+
+  const activeElder = linkedElders.find((e) => e.id === currentElderId) || linkedElders[0];
+
   const [notifications, setNotifications] = useState([
     { id: '1', text: 'Evening medicine reminder in 30 minutes.', time: 'Just now' },
     { id: '2', text: 'This week’s caregiver report is ready to view.', time: '2 hours ago' },
@@ -32,6 +60,32 @@ export const Topbar: React.FC<TopbarProps> = ({
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  // Close menus on outside click or Esc key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsNotifOpen(false);
+        setIsElderMenuOpen(false);
+      }
+    };
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (notifRef.current && !notifRef.current.contains(target)) {
+        setIsNotifOpen(false);
+      }
+      if (elderMenuRef.current && !elderMenuRef.current.contains(target)) {
+        setIsElderMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const isAssamese = language === 'Assamese';
   const isCaregiver = userRole === 'caregiver';
 
@@ -40,14 +94,16 @@ export const Topbar: React.FC<TopbarProps> = ({
       <div className="min-w-0">
         <h1 className="font-fraunces font-medium text-lg sm:text-xl text-[#221F1B] truncate">
           {isCaregiver
-            ? 'Caregiver Oversight'
+            ? activeElder
+              ? `Caregiver Oversight — ${activeElder.name}`
+              : 'Caregiver Oversight'
             : isAssamese
             ? 'নমস্কাৰ, বিমলা আইতা'
-            : 'Namaskar, Bimala aita'}
+            : `Namaskar, ${elderName}`}
         </h1>
         <p className="text-xs text-[#665F51] font-semibold hidden sm:block">
           {isCaregiver
-            ? 'Real-time elder connection, activity alerts, and safety perimeter'
+            ? `Active oversight for ${activeElder?.name || 'elder'} (${activeElder?.id || 'SHY-9021'}) · Safety perimeter active`
             : 'Tuesday, 30 August · Let’s begin today’s activities'}
         </p>
       </div>
@@ -90,6 +146,75 @@ export const Topbar: React.FC<TopbarProps> = ({
           </button>
         )}
 
+        {/* 1-Tap Elder Profile Switcher Pill in Topbar (Issue #9) */}
+        {isCaregiver && linkedElders.length > 0 && (
+          <div className="relative" ref={elderMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsElderMenuOpen(!isElderMenuOpen)}
+              aria-label={`Active elder: ${activeElder?.name}. Click to switch elder profile.`}
+              aria-expanded={isElderMenuOpen}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E6DAB9] bg-[#FBF7EE] text-[#221F1B] font-baloo font-bold text-xs hover:border-[#22403A] cursor-pointer transition-colors shadow-xs"
+            >
+              <span
+                style={{ backgroundColor: activeElder?.avatarColor || '#22403A' }}
+                className="w-4 h-4 rounded-full text-white text-[9px] flex items-center justify-center font-bold"
+              >
+                {activeElder?.name?.charAt(0) || 'E'}
+              </span>
+              <span className="max-w-[100px] truncate">{activeElder?.name}</span>
+              <span className="text-[10px] text-[#665F51] hidden md:inline">({activeElder?.id})</span>
+              <ChevronDown className="w-3 h-3 text-[#665F51]" />
+            </button>
+
+            {isElderMenuOpen && (
+              <div
+                role="menu"
+                className="absolute top-full left-0 mt-2 w-56 bg-white border border-[#E6DAB9] rounded-2xl shadow-xl overflow-hidden z-50 animate-rise p-1.5 divide-y divide-[#E6DAB9]/40"
+              >
+                <div className="px-3 py-1.5 text-[10px] font-baloo font-bold uppercase tracking-wider text-[#665F51]">
+                  Linked Elders ({linkedElders.length})
+                </div>
+                <div className="pt-1 space-y-0.5">
+                  {linkedElders.map((elder) => {
+                    const isSelected = elder.id === currentElderId;
+                    return (
+                      <button
+                        key={elder.id}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          if (onSelectElder) onSelectElder(elder.id);
+                          setIsElderMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-baloo font-bold cursor-pointer transition-colors ${
+                          isSelected ? 'bg-[#E4ECE7] text-[#22403A]' : 'text-[#221F1B] hover:bg-[#FBF7EE]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            style={{ backgroundColor: elder.avatarColor || '#22403A' }}
+                            className="w-5 h-5 rounded-md text-white text-[10px] font-bold flex items-center justify-center"
+                          >
+                            {elder.name.charAt(0)}
+                          </span>
+                          <div className="text-left">
+                            <div className="leading-tight">{elder.name}</div>
+                            <div className="text-[10px] text-[#665F51]">
+                              {elder.relationTag} · {elder.id}
+                            </div>
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#22403A]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Streak chip (Companion mode only) */}
         {!isCaregiver && (
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8E6C1] text-[#8A5D18] font-baloo font-bold text-xs">
@@ -109,10 +234,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         </button>
 
         {/* Notifications */}
-        <div className="relative">
+        <div className="relative" ref={notifRef}>
           <button
             onClick={() => setIsNotifOpen(!isNotifOpen)}
             className="w-9 h-9 rounded-xl bg-[#F1E7CE] text-[#22403A] flex items-center justify-center cursor-pointer hover:bg-[#E6DAB9] transition-colors relative"
+            aria-label="Notifications"
           >
             <Bell className="w-4 h-4" />
             {notifications.length > 0 && (
@@ -124,11 +250,11 @@ export const Topbar: React.FC<TopbarProps> = ({
             <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 bg-white border border-[#E6DAB9] rounded-2xl shadow-xl overflow-hidden z-50 animate-rise">
               <div className="p-3.5 border-b border-[#E6DAB9] font-baloo font-bold text-xs text-[#22403A] flex items-center justify-between">
                 <span>Notifications</span>
-                <span className="text-[10px] text-[#948C7A]">{notifications.length} unread</span>
+                <span className="text-[10px] text-[#665F51]">{notifications.length} unread</span>
               </div>
               <div className="divide-y divide-[#E6DAB9] max-h-64 overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="p-5 text-center text-xs text-[#948C7A]">
+                  <div className="p-5 text-center text-xs text-[#665F51]">
                     You’re all caught up.
                   </div>
                 ) : (
@@ -136,11 +262,12 @@ export const Topbar: React.FC<TopbarProps> = ({
                     <div key={n.id} className="p-3 flex items-start gap-2.5 text-xs">
                       <div className="flex-1">
                         <p className="text-[#221F1B] font-medium leading-tight mb-1">{n.text}</p>
-                        <span className="text-[10px] text-[#948C7A]">{n.time}</span>
+                        <span className="text-[10px] text-[#665F51]">{n.time}</span>
                       </div>
                       <button
                         onClick={() => dismissNotif(n.id)}
-                        className="text-[#948C7A] hover:text-[#221F1B] p-0.5 cursor-pointer"
+                        className="text-[#665F51] hover:text-[#221F1B] p-0.5 cursor-pointer"
+                        aria-label="Dismiss notification"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
