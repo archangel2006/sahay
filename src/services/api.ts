@@ -13,6 +13,28 @@ import {
 } from '../types';
 import { sandboxStorage } from './sandboxStorage';
 
+/**
+ * Converts an audio Blob into a persistent base64 data URI string.
+ * This allows browser-recorded voice greetings to be stored directly
+ * inside the family member contact record and replayed offline.
+ */
+export async function convertBlobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Failed to convert audio blob to base64 string'));
+      }
+    };
+    reader.onerror = () => {
+      reject(reader.error || new Error('FileReader error during audio conversion'));
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
 export const api = {
   // Reminders
   async getReminders(): Promise<ReminderItem[]> {
@@ -132,6 +154,26 @@ export const api = {
     const updated = current.map((m) => (m.id === item.id ? item : m));
     sandboxStorage.saveFamily(updated);
     return item;
+  },
+
+  /**
+   * Helper to convert an audio Blob into a base64 data URI string.
+   */
+  async blobToBase64(blob: Blob): Promise<string> {
+    return convertBlobToBase64(blob);
+  },
+
+  /**
+   * Saves or updates a recorded voice note audio URI for a family member.
+   */
+  async saveVoiceNote(memberId: string, audioUrl: string): Promise<FamilyMemberItem> {
+    const current = sandboxStorage.getFamily();
+    const target = current.find((m) => m.id === memberId);
+    if (!target) {
+      throw new Error(`Family member with id ${memberId} not found`);
+    }
+    const updated: FamilyMemberItem = { ...target, audioUrl };
+    return this.updateFamilyMember(updated);
   },
 
   // Activity Logs
