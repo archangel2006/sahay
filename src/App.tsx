@@ -263,6 +263,8 @@ export default function App() {
               appointments={appointments}
               onAdd={handleAddAppointment}
               showToast={showToast}
+              safeZoneRadius={safeZoneRadius}
+              zoneEvents={zoneEvents}
             />
           )}
 

@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
-import { Calendar, Plus } from 'lucide-react';
-import { AppointmentItem } from '../../types';
+import { Calendar, Plus, Printer } from 'lucide-react';
+import { AppointmentItem, ZoneEventItem } from '../../types';
+import { ClinicalSummaryModal } from '../family/ClinicalSummaryModal';
 
 interface AppointmentsViewProps {
   appointments: AppointmentItem[];
   onAdd: (item: Omit<AppointmentItem, 'id'>) => void;
   showToast: (msg: string, icon?: string) => void;
+  safeZoneRadius?: number;
+  zoneEvents?: ZoneEventItem[];
 }
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   appointments,
   onAdd,
   showToast,
+  safeZoneRadius = 600,
+  zoneEvents = [],
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -50,13 +56,23 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         <h2 className="font-fraunces text-2xl md:text-3xl font-medium text-[#221F1B]">
           Upcoming Appointments
         </h2>
-        <button
-          onClick={() => setIsFormOpen(!isFormOpen)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#E6DAB9] bg-white text-[#221F1B] font-baloo font-bold text-xs hover:border-[#22403A] transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          Add appointment
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#22403A]/20 bg-[#E4ECE7] text-[#22403A] font-baloo font-bold text-xs hover:bg-[#d6e3dc] transition-colors cursor-pointer"
+            title="Generate and print comprehensive 30-day medical assessment summary for physician visit"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#BD5B3B]" />
+            Export Doctor Report (PDF / Print)
+          </button>
+          <button
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#E6DAB9] bg-white text-[#221F1B] font-baloo font-bold text-xs hover:border-[#22403A] transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Add appointment
+          </button>
+        </div>
       </div>
 
       {isFormOpen && (
@@ -130,6 +146,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Geriatric Clinical Summary Printable Modal */}
+      <ClinicalSummaryModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        safeZoneRadius={safeZoneRadius}
+        zoneEvents={zoneEvents}
+      />
     </div>
   );
 };
