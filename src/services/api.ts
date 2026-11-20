@@ -11,6 +11,7 @@ import {
   FamilyMemberItem,
   ZoneEventItem,
 } from '../types';
+import { PatientScheduleContext } from '../types/assistant';
 import { sandboxStorage } from './sandboxStorage';
 
 /**
@@ -231,13 +232,17 @@ export const api = {
     }
   },
 
-  // AI Assistant Chat
-  async askAssistant(prompt: string, language: string = 'English'): Promise<string> {
+  // AI Assistant Chat with Injected Schedule Telemetry
+  async askAssistant(
+    prompt: string,
+    language: string = 'English',
+    scheduleContext?: PatientScheduleContext
+  ): Promise<string> {
     try {
       const res = await fetch('/api/assistant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, language }),
+        body: JSON.stringify({ prompt, language, scheduleContext }),
       });
       const data = await res.json();
       return data.reply || 'Namaskar! I am here with you.';

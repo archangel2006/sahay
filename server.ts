@@ -4,6 +4,12 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
+import {
+  buildGeminiSystemInstruction,
+  parseRemindersToScheduleItems,
+  parseAppointmentsToScheduleItems,
+} from './src/services/scheduleContextBuilder';
+import { PatientScheduleContext } from './src/types/assistant';
 
 dotenv.config();
 
@@ -127,30 +133,55 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Sahay API Baseline', timestamp: new Date().toISOString() });
 });
 
-// Assistant Chat endpoint with Gemini
+// Assistant Chat endpoint with Gemini & Context-Aware Schedule Injection (Issue #5)
 app.post('/api/assistant/chat', async (req, res) => {
   try {
-    const { prompt, language = 'English' } = req.body;
+    const { prompt, language = 'English', scheduleContext } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
+    // Active schedule context: uses client telemetry or server's active schedule data
+    const activeSchedule: PatientScheduleContext = scheduleContext || {
+      patientName: 'Bimala aita',
+      date: new Date().toLocaleDateString('en-IN'),
+      timezone: 'Asia/Kolkata',
+      items: [
+        ...parseRemindersToScheduleItems(reminders),
+        ...parseAppointmentsToScheduleItems(appointments),
+      ],
+      safeZoneStatus: 'inside',
+    };
+
     const ai = getGenAI();
     if (!ai) {
-      // Graceful fallback if GEMINI_API_KEY is not configured yet
+      // Context-aware resilient fallback
+      const lowerPrompt = prompt.toLowerCase();
+      let contextualReply = `Namaskar! I have noted your message: "${prompt}". Your daily schedule is intact, and Ranjit (son) has been notified.`;
+
+      if (lowerPrompt.includes('medicine') || lowerPrompt.includes('pill') || lowerPrompt.includes('ঔষধ') || lowerPrompt.includes('দৱা')) {
+        const meds = activeSchedule.items.filter((i) => i.type === 'medication');
+        const doneMed = meds.find((m) => m.status === 'completed');
+        const pendingMed = meds.find((m) => m.status === 'pending');
+        contextualReply = `Namaskar Aita! I checked your schedule: your ${
+          doneMed ? doneMed.title + ' is marked as taken' : 'morning medicine is recorded'
+        }, and your next dose is ${pendingMed ? pendingMed.title + ' at ' + pendingMed.time : 'on track'}.`;
+      } else if (lowerPrompt.includes('doctor') || lowerPrompt.includes('appointment') || lowerPrompt.includes('ডাক্তাৰ')) {
+        const nextAppt = activeSchedule.items.find((i) => i.type === 'appointment');
+        contextualReply = nextAppt
+          ? `Namaskar Aita! Your next appointment is "${nextAppt.title}" scheduled for ${nextAppt.time}.`
+          : `Namaskar Aita! You have no doctor visits scheduled for today. Rest comfortably.`;
+      }
+
       return res.json({
-        reply: `Namaskar! I have noted your message: "${prompt}". Your daily schedule is intact, your 6-day streak is active, and Ranjit (son) has been notified.`,
+        reply: contextualReply,
         source: 'fallback',
+        contextInjected: true,
       });
     }
 
-    const systemInstruction = `You are Sahay, a compassionate, patient, and culturally respectful AI care assistant designed specifically for elderly people in North-East India (such as Assam, Meghalaya, Manipur, Mizoram).
-Your user may be an elder like Bimala aita.
-- Be warm, gentle, and concise (1-2 sentences maximum).
-- Speak with elder-friendly respect (use respectful honorifics like "Aita", "Deuta", "Namaskar", "Khublei").
-- Language preference: ${language}. If asked in Assamese, Bodo, Khasi, Manipuri, Mizo, or English, answer empathetically in that language.
-- Provide reassurance about their daily routine, medicine timings, family connection, and gentle cognitive well-being.
-- Never use clinical jargon or alarming warnings.`;
+    // Build compassionate, culturally respectful Gemini system instruction with structured schedule injection
+    const systemInstruction = buildGeminiSystemInstruction(language, activeSchedule);
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -162,7 +193,7 @@ Your user may be an elder like Bimala aita.
     });
 
     const reply = response.text || 'Namaskar! I am here with you. Everything is in order.';
-    res.json({ reply, source: 'gemini' });
+    res.json({ reply, source: 'gemini', contextInjected: true });
   } catch (error: any) {
     console.error('Assistant API error:', error);
     res.json({
