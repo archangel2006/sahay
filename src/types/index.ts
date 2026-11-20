@@ -100,3 +100,15 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
 }
+
+export interface SpeechSettings {
+  rate: number; // 0.75 | 0.9 | 1.0
+  pitch: number; // 0.9 - 1.1
+  voiceURI?: string;
+}
+
+export const DEFAULT_SPEECH_SETTINGS: SpeechSettings = {
+  rate: 0.9,
+  pitch: 1.05,
+  voiceURI: '',
+};

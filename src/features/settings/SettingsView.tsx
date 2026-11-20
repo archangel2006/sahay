@@ -1,6 +1,6 @@
-import React from 'react';
-import { Sliders, Type, Globe, Bell, LogOut, RotateCcw, Shield } from 'lucide-react';
-import { SupportedLanguage, TextScale, UserRole, PortalMode } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Sliders, Type, Globe, Bell, LogOut, RotateCcw, Shield, Volume2, Play } from 'lucide-react';
+import { SupportedLanguage, TextScale, UserRole, PortalMode, SpeechSettings, DEFAULT_SPEECH_SETTINGS } from '../../types';
 import { sandboxStorage } from '../../services/sandboxStorage';
 
 interface SettingsViewProps {
@@ -36,6 +36,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { name: 'Manipuri', label: 'Manipuri' },
     { name: 'Mizo', label: 'Mizo' },
   ];
+
+  const [speechSettings, setSpeechSettings] = useState<SpeechSettings>(() => {
+    try {
+      const saved = localStorage.getItem('sahay_speech_settings_v1');
+      return saved ? JSON.parse(saved) : DEFAULT_SPEECH_SETTINGS;
+    } catch {
+      return DEFAULT_SPEECH_SETTINGS;
+    }
+  });
+
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const updateVoices = () => {
+      if ('speechSynthesis' in window) {
+        const voices = window.speechSynthesis.getVoices();
+        setAvailableVoices(voices);
+      }
+    };
+    updateVoices();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
+  }, []);
+
+  const updateSpeechSettings = (newSettings: Partial<SpeechSettings>) => {
+    const updated = { ...speechSettings, ...newSettings };
+    setSpeechSettings(updated);
+    try {
+      localStorage.setItem('sahay_speech_settings_v1', JSON.stringify(updated));
+    } catch {}
+  };
+
+  const handleTestVoice = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const testMsg = language === 'Assamese'
+        ? 'নমস্কাৰ! মই সহায়, আপোনাৰ লগত আছোঁ।'
+        : 'Namaskar! This is Sahay speaking at your chosen speed and pitch.';
+      const utterance = new SpeechSynthesisUtterance(testMsg);
+      utterance.rate = speechSettings.rate;
+      utterance.pitch = speechSettings.pitch;
+      if (speechSettings.voiceURI) {
+        const selectedVoice = availableVoices.find((v) => v.voiceURI === speechSettings.voiceURI);
+        if (selectedVoice) utterance.voice = selectedVoice;
+      }
+      window.speechSynthesis.speak(utterance);
+      showToast('Testing speech playback…', 'play');
+    }
+  };
 
   return (
     <div className="animate-rise max-w-[1180px]">
@@ -109,6 +159,77 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Voice & Speech Playback Preferences */}
+          <div className="bg-white border border-[#E6DAB9] rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-baloo font-bold text-sm text-[#22403A] flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-[#E2A33D]" />
+                Speech Synthesis &amp; Voice Speed
+              </h3>
+              <button
+                type="button"
+                onClick={handleTestVoice}
+                className="px-2.5 py-1 rounded-lg bg-[#E4ECE7] text-[#22403A] hover:bg-[#22403A] hover:text-[#FBF7EE] font-baloo font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>Test Voice</span>
+              </button>
+            </div>
+
+            {/* Speaking Rate Buttons */}
+            <div className="mb-4">
+              <span className="text-xs font-baloo font-bold text-[#665F51] block mb-2">Speaking Pace</span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { rate: 0.75, label: 'Slow (0.75x)', desc: 'Clear & deliberate' },
+                  { rate: 0.9, label: 'Gentle (0.9x)', desc: 'Elder recommended' },
+                  { rate: 1.0, label: 'Standard (1.0x)', desc: 'Normal conversation' },
+                ].map((item) => (
+                  <button
+                    key={item.rate}
+                    type="button"
+                    onClick={() => {
+                      updateSpeechSettings({ rate: item.rate });
+                      showToast(`Voice pace set to ${item.label}`, 'check');
+                    }}
+                    className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      speechSettings.rate === item.rate
+                        ? 'bg-[#22403A] text-[#FBF7EE] border-[#22403A]'
+                        : 'bg-[#FBF7EE] text-[#221F1B] border-[#E6DAB9] hover:border-[#22403A]'
+                    }`}
+                  >
+                    <span className="font-baloo font-bold text-xs block leading-tight">{item.label}</span>
+                    <span className="text-[9px] opacity-80">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Voice Dropdown */}
+            {availableVoices.length > 0 && (
+              <div>
+                <label className="text-xs font-baloo font-bold text-[#665F51] block mb-1.5">
+                  Voice Accent &amp; Voice Profile
+                </label>
+                <select
+                  value={speechSettings.voiceURI || ''}
+                  onChange={(e) => {
+                    updateSpeechSettings({ voiceURI: e.target.value });
+                    showToast('Voice profile updated', 'check');
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-[#E6DAB9] text-xs bg-[#FBF7EE] text-[#221F1B] focus:outline-2 focus:outline-[#22403A]"
+                >
+                  <option value="">Default System Voice</option>
+                  {availableVoices.map((voice) => (
+                    <option key={voice.voiceURI} value={voice.voiceURI}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 

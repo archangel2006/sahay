@@ -38,8 +38,30 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.pitch = 1.05;
+
+        // Apply customized speech settings
+        let rate = 0.9;
+        let pitch = 1.05;
+        let voiceURI = '';
+        try {
+          const saved = localStorage.getItem('sahay_speech_settings_v1');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.rate) rate = parsed.rate;
+            if (parsed.pitch) pitch = parsed.pitch;
+            if (parsed.voiceURI) voiceURI = parsed.voiceURI;
+          }
+        } catch {}
+
+        utterance.rate = rate;
+        utterance.pitch = pitch;
+
+        if (voiceURI) {
+          const voices = window.speechSynthesis.getVoices();
+          const selected = voices.find((v) => v.voiceURI === voiceURI);
+          if (selected) utterance.voice = selected;
+        }
+
         setIsSpeaking(true);
         utterance.onend = () => setIsSpeaking(false);
         utterance.onerror = () => setIsSpeaking(false);
