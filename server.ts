@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // In-memory data store for open-source golden baseline
 let reminders = [
@@ -29,7 +29,18 @@ let appointments = [
   { id: '3', title: 'Routine cognitive assessment', date: '02', month: 'OCT', time: '11:00 AM', mode: 'Community PHC visit' },
 ];
 
-let familyMembers = [
+let familyMembers: Array<{
+  id: string;
+  name: string;
+  rel: string;
+  fact: string;
+  color: string;
+  phone?: string;
+  address?: string;
+  voiceNoteText?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+}> = [
   {
     id: '1',
     name: 'Ranjit',
@@ -215,7 +226,7 @@ app.get('/api/family', (req, res) => {
 });
 
 app.post('/api/family', (req, res) => {
-  const { name, rel, fact, color = '#3E4F74', imageUrl, address, phone, voiceNoteText } = req.body;
+  const { name, rel, fact, color = '#3E4F74', imageUrl, address, phone, voiceNoteText, audioUrl } = req.body;
   if (!name || !rel) return res.status(400).json({ error: 'Name and relationship are required' });
   const newItem = {
     id: String(Date.now()),
@@ -227,6 +238,7 @@ app.post('/api/family', (req, res) => {
     address: address || '',
     phone: phone || '',
     voiceNoteText: voiceNoteText || '',
+    audioUrl: audioUrl || '',
   };
   familyMembers.push(newItem);
   res.status(201).json(newItem);
@@ -236,7 +248,7 @@ app.put('/api/family/:id', (req, res) => {
   const { id } = req.params;
   const index = familyMembers.findIndex((m) => m.id === id);
   if (index === -1) return res.status(404).json({ error: 'Family member not found' });
-  const { name, rel, fact, color, imageUrl, address, phone, voiceNoteText } = req.body;
+  const { name, rel, fact, color, imageUrl, address, phone, voiceNoteText, audioUrl } = req.body;
   familyMembers[index] = {
     ...familyMembers[index],
     name: name ?? familyMembers[index].name,
@@ -247,6 +259,7 @@ app.put('/api/family/:id', (req, res) => {
     address: address !== undefined ? address : familyMembers[index].address,
     phone: phone !== undefined ? phone : familyMembers[index].phone,
     voiceNoteText: voiceNoteText !== undefined ? voiceNoteText : familyMembers[index].voiceNoteText,
+    audioUrl: audioUrl !== undefined ? audioUrl : familyMembers[index].audioUrl,
   };
   res.json(familyMembers[index]);
 });

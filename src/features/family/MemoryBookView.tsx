@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Users,
   Plus,
@@ -7,14 +7,514 @@ import {
   MapPin,
   Volume2,
   Mic,
+  MicOff,
   Heart,
   Edit2,
   Navigation,
   ExternalLink,
   X,
   Sparkles,
+  Pause,
+  RotateCcw,
+  Trash2,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 import { FamilyMemberItem } from '../../types';
+import { convertBlobToBase64 } from '../../services/api';
+
+interface VoiceNoteRecorderProps {
+  initialAudioUrl?: string;
+  onAudioChange: (dataUriOrUrl: string) => void;
+  showToast: (msg: string, icon?: string) => void;
+  elderName?: string;
+}
+
+/**
+ * In-Browser Voice Note Audio Recorder for Memory Book
+ * 
+ * - Limits recording to 15 seconds using navigator.mediaDevices.getUserMedia
+ * - Supports Record, Pause/Resume, Stop early, and Discard
+ * - Converts audio to Base64 Data URI (persisting in contact record) with Object URL fallback
+ * - Provides full Review Playback Preview so caregiver can listen before saving
+ */
+export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({
+  initialAudioUrl = '',
+  onAudioChange,
+  showToast,
+  elderName = 'your loved one',
+}) => {
+  const [status, setStatus] = useState<'idle' | 'recording' | 'paused' | 'recorded'>(() =>
+    initialAudioUrl ? 'recorded' : 'idle'
+  );
+  const [audioUrl, setAudioUrl] = useState<string>(initialAudioUrl);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [previewProgress, setPreviewProgress] = useState(0);
+  const [previewDuration, setPreviewDuration] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerIntervalRef = useRef<any>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    setAudioUrl(initialAudioUrl || '');
+    if (initialAudioUrl) {
+      setStatus('recorded');
+    } else {
+      setStatus('idle');
+    }
+    setElapsedSeconds(0);
+    setIsPlayingPreview(false);
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+  }, [initialAudioUrl]);
+
+  useEffect(() => {
+    return () => {
+      stopTracks();
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const stopTracks = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+  };
+
+  const startRecording = async () => {
+    setErrorMessage(null);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const msg = 'Microphone recording is not supported in this browser or environment.';
+      setErrorMessage(msg);
+      showToast(msg, 'alert');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
+      mediaStreamRef.current = stream;
+
+      const preferredMimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+      ];
+      const mimeType = preferredMimeTypes.find((t) => MediaRecorder.isTypeSupported(t)) || '';
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        stopTracks();
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+
+        const blob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm',
+        });
+
+        setIsProcessing(true);
+        try {
+          const base64Uri = await convertBlobToBase64(blob);
+          setAudioUrl(base64Uri);
+          onAudioChange(base64Uri);
+          showToast('15s voice note recorded! Preview below.', 'check');
+        } catch (err) {
+          const objectUrl = URL.createObjectURL(blob);
+          setAudioUrl(objectUrl);
+          onAudioChange(objectUrl);
+          showToast('Voice note attached via Object URL!', 'check');
+        } finally {
+          setIsProcessing(false);
+          setStatus('recorded');
+        }
+      };
+
+      recorder.start(200);
+      setStatus('recording');
+      setElapsedSeconds(0);
+      showToast('Recording... (15 seconds max)', 'mic');
+
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = setInterval(() => {
+        setElapsedSeconds((prev) => {
+          const next = Math.round((prev + 0.1) * 10) / 10;
+          if (next >= 15.0) {
+            stopRecording();
+            return 15.0;
+          }
+          return next;
+        });
+      }, 100);
+    } catch (err: any) {
+      stopTracks();
+      const msg = err.name === 'NotAllowedError'
+        ? 'Microphone permission denied. Please allow microphone access in your browser settings.'
+        : `Microphone error: ${err.message || 'Unable to access audio device'}`;
+      setErrorMessage(msg);
+      showToast(msg, 'alert');
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.pause();
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setStatus('paused');
+      showToast('Recording paused', 'pause');
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+      mediaRecorderRef.current.resume();
+      setStatus('recording');
+      showToast('Recording resumed', 'mic');
+
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = setInterval(() => {
+        setElapsedSeconds((prev) => {
+          const next = Math.round((prev + 0.1) * 10) / 10;
+          if (next >= 15.0) {
+            stopRecording();
+            return 15.0;
+          }
+          return next;
+        });
+      }, 100);
+    }
+  };
+
+  const stopRecording = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const discardRecording = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+    }
+    stopTracks();
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+    setElapsedSeconds(0);
+    setIsPlayingPreview(false);
+    setStatus(audioUrl ? 'recorded' : 'idle');
+    showToast('Recording discarded', 'alert');
+  };
+
+  const handleReRecord = () => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+    setIsPlayingPreview(false);
+    setAudioUrl('');
+    onAudioChange('');
+    setElapsedSeconds(0);
+    setPreviewProgress(0);
+    setStatus('idle');
+    startRecording();
+  };
+
+  const handleRemoveAudio = () => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+    setIsPlayingPreview(false);
+    setAudioUrl('');
+    onAudioChange('');
+    setElapsedSeconds(0);
+    setPreviewProgress(0);
+    setStatus('idle');
+    showToast('Voice note removed', 'check');
+  };
+
+  const togglePreview = () => {
+    if (!audioUrl) return;
+
+    if (isPlayingPreview) {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+      setIsPlayingPreview(false);
+    } else {
+      if (!previewAudioRef.current || previewAudioRef.current.src !== audioUrl) {
+        const audio = new Audio(audioUrl);
+        previewAudioRef.current = audio;
+
+        audio.onloadedmetadata = () => {
+          setPreviewDuration(audio.duration || 15);
+        };
+        audio.ontimeupdate = () => {
+          setPreviewProgress(audio.currentTime);
+        };
+        audio.onended = () => {
+          setIsPlayingPreview(false);
+          setPreviewProgress(0);
+        };
+        audio.onerror = () => {
+          setIsPlayingPreview(false);
+          showToast('Could not play audio preview', 'alert');
+        };
+      }
+
+      previewAudioRef.current.play().then(() => {
+        setIsPlayingPreview(true);
+      }).catch((e) => {
+        console.warn('Preview playback error:', e);
+        setIsPlayingPreview(false);
+      });
+    }
+  };
+
+  const progressPercent = Math.min(100, Math.round((elapsedSeconds / 15) * 100));
+
+  return (
+    <div className="bg-[#FBF7EE] border border-[#E6DAB9] rounded-2xl p-4 transition-all">
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-baloo font-bold text-[#22403A] flex items-center gap-1.5 uppercase tracking-wider">
+          <Mic className="w-3.5 h-3.5 text-[#BD5B3B]" />
+          Record Voice Note (15s Max)
+        </label>
+        {status === 'recorded' && audioUrl && (
+          <span className="text-[10px] font-baloo font-bold text-[#22403A] bg-[#E4ECE7] px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-[#22403A]/20">
+            <Check className="w-3 h-3 text-[#3F7455]" />
+            Voice Note Attached
+          </span>
+        )}
+      </div>
+
+      <p className="text-[11px] text-[#665F51] mb-3 leading-relaxed">
+        Record a real voice note from your microphone so {elderName} can tap <strong>"Play Hello"</strong> and hear your real voice.
+      </p>
+
+      {errorMessage && (
+        <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {/* STATE 1: IDLE */}
+      {status === 'idle' && (
+        <button
+          type="button"
+          onClick={startRecording}
+          disabled={isProcessing}
+          className="w-full py-2.5 px-4 rounded-xl bg-[#22403A] hover:bg-[#152B26] text-[#FBF7EE] font-baloo font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs group"
+        >
+          <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Mic className="w-3 h-3 text-white" />
+          </div>
+          <span>Start 15-Second Recording</span>
+        </button>
+      )}
+
+      {/* STATE 2: RECORDING OR PAUSED */}
+      {(status === 'recording' || status === 'paused') && (
+        <div className="space-y-2.5 bg-white p-3.5 rounded-xl border border-[#E6DAB9]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  status === 'recording' ? 'bg-[#BD5B3B] animate-pulse' : 'bg-[#E2A33D]'
+                }`}
+              />
+              <span className="font-baloo font-bold text-xs uppercase tracking-wider text-[#221F1B]">
+                {status === 'recording' ? 'Recording Voice…' : 'Recording Paused'}
+              </span>
+            </div>
+
+            {/* Sound Wave Animation */}
+            <div className="flex items-center gap-1 h-5">
+              {[40, 80, 100, 60, 90, 50, 75].map((h, i) => (
+                <span
+                  key={i}
+                  style={{ height: `${status === 'recording' ? h : 25}%` }}
+                  className={`w-1 rounded-full transition-all duration-150 ${
+                    status === 'recording'
+                      ? 'bg-[#BD5B3B] animate-pulse'
+                      : 'bg-[#BD5B3B]/40'
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="font-mono text-xs font-bold text-[#BD5B3B]">
+              00:{elapsedSeconds < 10 ? `0${Math.floor(elapsedSeconds)}` : Math.floor(elapsedSeconds)} / 00:15
+            </div>
+          </div>
+
+          {/* 15-Second Progress Bar */}
+          <div className="w-full bg-[#F1E7CE] rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-[#BD5B3B] h-full rounded-full transition-all duration-100"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+
+          <div className="text-[11px] text-[#948C7A] text-right font-medium">
+            {(15 - elapsedSeconds).toFixed(1)}s remaining
+          </div>
+
+          {/* Recording Controls */}
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            {status === 'recording' ? (
+              <button
+                type="button"
+                onClick={pauseRecording}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-[#F1E7CE] text-[#221F1B] hover:bg-[#E6DAB9] font-baloo font-bold text-xs transition-colors cursor-pointer"
+              >
+                <Pause className="w-3.5 h-3.5 text-[#8A5D18]" />
+                <span>Pause</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={resumeRecording}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-[#E4ECE7] text-[#22403A] hover:bg-[#22403A] hover:text-white font-baloo font-bold text-xs transition-colors cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Resume</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={stopRecording}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-[#22403A] text-white hover:bg-[#152B26] font-baloo font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            >
+              <Check className="w-3.5 h-3.5 text-[#E4ECE7]" />
+              <span>Done</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={discardRecording}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-white border border-[#E6DAB9] text-[#665F51] hover:bg-red-50 hover:text-red-700 hover:border-red-200 font-baloo font-bold text-xs transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Discard</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* STATE 3: RECORDED & REVIEW PLAYBACK PREVIEW */}
+      {status === 'recorded' && audioUrl && (
+        <div className="bg-white p-3.5 rounded-xl border border-[#22403A]/25 space-y-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-baloo font-bold text-[#22403A] flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4 text-[#22403A]" />
+              Review Playback Preview
+            </span>
+            <span className="text-[11px] font-mono text-[#665F51]">
+              {previewProgress > 0 ? `${previewProgress.toFixed(1)}s` : '0.0s'} / {previewDuration ? `${previewDuration.toFixed(1)}s` : '15.0s'}
+            </span>
+          </div>
+
+          {/* Visual Scrubber Preview */}
+          <div className="w-full bg-[#E4ECE7] rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-[#22403A] h-full rounded-full transition-all duration-100"
+              style={{
+                width: `${previewDuration ? Math.min(100, (previewProgress / previewDuration) * 100) : 0}%`,
+              }}
+            />
+          </div>
+
+          {/* Action Strip: Play Preview, Re-record, Remove */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <button
+              type="button"
+              onClick={togglePreview}
+              className="flex items-center gap-1.5 py-2 px-3.5 rounded-xl bg-[#22403A] text-[#FBF7EE] hover:bg-[#152B26] font-baloo font-bold text-xs transition-colors cursor-pointer shadow-xs"
+            >
+              {isPlayingPreview ? (
+                <>
+                  <Pause className="w-3.5 h-3.5" />
+                  <span>Pause Preview</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Play Preview</span>
+                </>
+              )}
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleReRecord}
+                className="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-[#F1E7CE] hover:bg-[#E6DAB9] text-[#221F1B] font-baloo font-bold text-xs transition-colors cursor-pointer"
+                title="Record a new 15-second audio clip"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Re-record</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRemoveAudio}
+                className="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-white border border-[#E6DAB9] text-[#BD5B3B] hover:bg-red-50 hover:border-red-300 font-baloo font-bold text-xs transition-colors cursor-pointer"
+                title="Remove this voice note"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface MemoryBookViewProps {
   familyMembers: FamilyMemberItem[];
@@ -34,6 +534,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
   onNavigateToInsights,
 }) => {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -48,7 +549,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
   const [address, setAddress] = useState('');
   const [voiceNoteText, setVoiceNoteText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState('');
 
   // Edit Form state
   const [editName, setEditName] = useState('');
@@ -58,6 +559,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
   const [editAddress, setEditAddress] = useState('');
   const [editVoiceNoteText, setEditVoiceNoteText] = useState('');
   const [editImageUrl, setEditImageUrl] = useState('');
+  const [editAudioUrl, setEditAudioUrl] = useState('');
 
   const samplePhotoAvatars = [
     { label: 'Son / Elder Man', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80' },
@@ -66,14 +568,61 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
     { label: 'Elder Friend', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80' },
   ];
 
+  const stopAllAudio = () => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopAllAudio();
+    };
+  }, []);
+
   const playVoiceNote = (member: FamilyMemberItem) => {
     if (playingId === member.id) {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      stopAllAudio();
       setPlayingId(null);
       return;
     }
 
+    stopAllAudio();
     setPlayingId(member.id);
+
+    // If a real voice note was recorded, play actual audio so elder hears child's or grandchild's real voice!
+    if (member.audioUrl) {
+      showToast(`Playing voice greeting from ${member.name}…`, 'play');
+      const audio = new Audio(member.audioUrl);
+      currentAudioRef.current = audio;
+
+      audio.onended = () => {
+        setPlayingId(null);
+        currentAudioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        showToast(`Could not play recorded audio, playing speech fallback…`, 'alert');
+        currentAudioRef.current = null;
+        speakFallback(member);
+      };
+
+      audio.play().catch((err) => {
+        console.warn('Audio playback error:', err);
+        currentAudioRef.current = null;
+        speakFallback(member);
+      });
+      return;
+    }
+
+    speakFallback(member);
+  };
+
+  const speakFallback = (member: FamilyMemberItem) => {
     const message = member.voiceNoteText || `Namaskar ${elderName}! We are thinking of you and sending our warmest love.`;
     showToast(`Playing voice greeting from ${member.name}…`, 'play');
 
@@ -119,6 +668,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
     setEditAddress(member.address || '');
     setEditVoiceNoteText(member.voiceNoteText || '');
     setEditImageUrl(member.imageUrl || '');
+    setEditAudioUrl(member.audioUrl || '');
     // If detail modal was open, close it while editing
     setSelectedMember(null);
   };
@@ -140,6 +690,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
       phone: editPhone.trim() || undefined,
       address: editAddress.trim() || undefined,
       voiceNoteText: editVoiceNoteText.trim() || undefined,
+      audioUrl: editAudioUrl.trim() || undefined,
     };
 
     if (onUpdateFamilyMember) {
@@ -168,6 +719,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
       phone: phone.trim() || undefined,
       address: address.trim() || undefined,
       voiceNoteText: voiceNoteText.trim() || undefined,
+      audioUrl: audioUrl.trim() || undefined,
     });
 
     setName('');
@@ -177,6 +729,7 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
     setAddress('');
     setVoiceNoteText('');
     setImageUrl('');
+    setAudioUrl('');
     setIsAddModalOpen(false);
     showToast(`${name} added to the Memory Book!`, 'check');
   };
@@ -287,11 +840,15 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                     <Sparkles className="w-3 h-3 text-[#E2A33D]" />
                     Tap card to view full story &amp; map
                   </span>
-                  {member.voiceNoteText && (
+                  {member.audioUrl ? (
+                    <span className="text-[10px] font-bold text-[#BD5B3B] bg-[#F5E1D6] px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Mic className="w-2.5 h-2.5" /> Real voice note
+                    </span>
+                  ) : member.voiceNoteText ? (
                     <span className="text-[10px] font-bold text-[#22403A] bg-[#E4ECE7] px-2 py-0.5 rounded-full">
                       Voice note ready
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-1">
@@ -304,11 +861,19 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                     className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl font-baloo font-bold text-xs cursor-pointer transition-all ${
                       isPlaying
                         ? 'bg-[#F8E6C1] text-[#8A5D18] border border-[#E2A33D] scale-98 animate-pulse'
+                        : member.audioUrl
+                        ? 'bg-[#22403A] text-[#FBF7EE] hover:bg-[#152B26] shadow-xs'
                         : 'bg-[#E4ECE7] text-[#22403A] hover:bg-[#22403A] hover:text-[#FBF7EE]'
                     }`}
                   >
                     <Volume2 className="w-3.5 h-3.5" />
-                    <span>{isPlaying ? 'Speaking…' : 'Play Voice'}</span>
+                    <span>
+                      {isPlaying
+                        ? 'Playing…'
+                        : member.audioUrl
+                        ? 'Play Hello'
+                        : 'Play Voice'}
+                    </span>
                   </button>
 
                   <button
@@ -427,11 +992,20 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
               {/* Voice Greeting Player */}
               <div className="p-4 bg-[#E4ECE7]/70 rounded-2xl border border-[#22403A]/20 flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <span className="text-xs font-baloo font-bold text-[#22403A] block mb-0.5">
-                    Recorded Voice Note
-                  </span>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs font-baloo font-bold text-[#22403A] block">
+                      {selectedMember.audioUrl ? 'Recorded Real Voice Note' : 'Recorded Voice Note'}
+                    </span>
+                    {selectedMember.audioUrl && (
+                      <span className="text-[10px] font-baloo font-bold text-[#BD5B3B] bg-[#F5E1D6] px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Mic className="w-2.5 h-2.5" /> Real Voice
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-[#665F51] truncate italic">
-                    "{selectedMember.voiceNoteText || 'Namaskar! Thinking of you.'}"
+                    {selectedMember.audioUrl
+                      ? `Real recorded voice greeting from ${selectedMember.name}`
+                      : `"${selectedMember.voiceNoteText || 'Namaskar! Thinking of you.'}"`}
                   </p>
                 </div>
 
@@ -441,7 +1015,13 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                   className="flex items-center gap-1.5 py-2 px-3.5 rounded-xl bg-[#22403A] text-[#FBF7EE] font-baloo font-bold text-xs hover:bg-[#152B26] transition-colors cursor-pointer shrink-0 shadow-xs"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
-                  <span>{playingId === selectedMember.id ? 'Playing…' : 'Play Voice'}</span>
+                  <span>
+                    {playingId === selectedMember.id
+                      ? 'Playing…'
+                      : selectedMember.audioUrl
+                      ? 'Play Hello'
+                      : 'Play Voice'}
+                  </span>
                 </button>
               </div>
 
@@ -589,15 +1169,23 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                 />
               </div>
 
+              {/* 15-Second In-Browser Audio Recorder */}
+              <VoiceNoteRecorder
+                initialAudioUrl={editAudioUrl}
+                onAudioChange={setEditAudioUrl}
+                showToast={showToast}
+                elderName={elderName}
+              />
+
               <div>
                 <label className="block text-xs font-baloo font-bold text-[#665F51] mb-1">
-                  Spoken Voice Greeting
+                  Backup Voice Greeting Text (Speech Fallback)
                 </label>
                 <input
                   type="text"
                   value={editVoiceNoteText}
                   onChange={(e) => setEditVoiceNoteText(e.target.value)}
-                  placeholder="Greeting read aloud when tapping Play Voice"
+                  placeholder="Optional text greeting read aloud if real audio is unavailable"
                   className="w-full px-3.5 py-2 rounded-xl border border-[#E6DAB9] text-sm focus:outline-2 focus:outline-[#22403A]"
                 />
               </div>
@@ -744,15 +1332,23 @@ export const MemoryBookView: React.FC<MemoryBookViewProps> = ({
                 />
               </div>
 
+              {/* 15-Second In-Browser Audio Recorder */}
+              <VoiceNoteRecorder
+                initialAudioUrl={audioUrl}
+                onAudioChange={setAudioUrl}
+                showToast={showToast}
+                elderName={elderName}
+              />
+
               <div>
                 <label className="block text-xs font-baloo font-bold text-[#665F51] mb-1">
-                  Spoken Voice Greeting
+                  Backup Voice Greeting Text (Speech Fallback)
                 </label>
                 <input
                   type="text"
                   value={voiceNoteText}
                   onChange={(e) => setVoiceNoteText(e.target.value)}
-                  placeholder="Greeting read aloud when tapping Play Voice"
+                  placeholder="Optional text greeting read aloud if real audio is unavailable"
                   className="w-full px-3.5 py-2 rounded-xl border border-[#E6DAB9] text-sm focus:outline-2 focus:outline-[#22403A]"
                 />
               </div>
