@@ -8,6 +8,7 @@ import { RoutineRecall } from './games/RoutineRecall';
 import { SpotDifference } from './games/SpotDifference';
 import { OddOneOut } from './games/OddOneOut';
 import { FaceFamilyMatch } from './games/FaceFamilyMatch';
+import { DigitSpan } from './games/DigitSpan';
 import { ContributePlaceholder } from './games/ContributePlaceholder';
 
 interface ActivityHostProps {
@@ -40,6 +41,7 @@ export const ActivityHost: React.FC<ActivityHostProps> = ({
       case 'faces':
         return <FaceFamilyMatch onSessionComplete={onSessionComplete} showToast={showToast} />;
       case 'numbers':
+        return <DigitSpan onSessionComplete={onSessionComplete} showToast={showToast} />;
       default:
         return <ContributePlaceholder activity={meta} showToast={showToast} />;
     }
